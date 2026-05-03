@@ -1,0 +1,16 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "touring-mania"
+pages_build_output_dir = "dist/public"
+compatibility_date = "2024-04-03"
+
+# D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "touring-mania-db"
+database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
+migrations_dir = "drizzle"
+
+# Assets (Cloudflare Pagesの場合は別の設定になりますが、Workersとして動かす場合を想定)
+# [assets]
+# directory = "./dist"
+# binding = "ASSETS"
