@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import BikeCard from "./BikeCard";
 
 type SpecType = "horsepower" | "fuelEfficiency" | "seatHeight" | "totalLength" | "weight" | "price" | "year";
 type DirectionType = "up" | "down";
@@ -77,37 +78,10 @@ export default function DeclarationPhase({
             </button>
 
             {showHand && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-4 mt-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {hand.map((bike: any) => (
-                  <div
-                    key={bike.id}
-                    className="bg-slate-800/80 border border-slate-700 rounded-lg p-3 hover:border-cyan-500/50 transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-white truncate">{bike.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{bike.maker}</p>
-                    <div className="flex justify-center gap-1 mt-1 mb-2">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">{bike.transmission}</span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">{bike.cylinders}気筒</span>
-                    </div>
-                    <div className="space-y-1">
-                      {SPEC_OPTIONS.map((spec) => {
-                        const isSelected = spec.value === selectedSpec;
-                        const value = getSpecValue(bike, spec.value);
-                        return (
-                          <div
-                            key={spec.value}
-                            className={`flex justify-between text-[10px] px-1 py-0.5 rounded ${
-                              isSelected
-                                ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            <span>{spec.label}</span>
-                            <span>{value}{spec.unit}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  <div key={bike.id} className="flex-shrink-0 snap-center transition-transform hover:scale-[1.02]">
+                    <BikeCard bike={bike} size="medium" showDetails={true} />
                   </div>
                 ))}
               </div>

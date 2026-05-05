@@ -519,13 +519,19 @@ export default function GameBoard() {
   if (gamePhase === 'declaration') {
     const declarationPlayer = gameState.game.declarationPlayer || 1;
     const playerName = declarationPlayer === 1 ? "You" : `Player ${declarationPlayer}`;
+    
+    const currentHandIds = gameState.players.find((p: any) => p.playerId === 1)?.hand || [];
+    const currentHandBikes = currentHandIds
+      .map((id: number) => gameState.bikes?.find((b: any) => b.id === id))
+      .filter(Boolean);
+
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <DeclarationPhase
           playerName={playerName}
           onDeclare={handleDeclaration}
           isLoading={declareSpecMutation.isPending}
-          hand={playerHand || []}
+          hand={currentHandBikes}
         />
       </div>
     );
