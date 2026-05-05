@@ -239,7 +239,7 @@ export const gameRouter = router({
           .set({
             declaredSpec: input.spec,
             declaredDirection: input.direction,
-            currentTurn: alreadyPlayed.length === 0 ? declarationPlayer : nextPlayer,
+            currentTurn: nextPlayer,
           })
           .where(eq(games.id, input.gameId));
 
