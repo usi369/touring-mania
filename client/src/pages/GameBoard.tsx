@@ -375,14 +375,18 @@ export default function GameBoard() {
     );
   }
 
-  // Show card play phase
-  if (gamePhase === 'playing') {
+  // Show card play or declaration phase
+  if (gamePhase === 'playing' || gamePhase === 'declaration') {
     const currentPlayerNum = gameState.game.currentTurn || 1;
     const isYourTurn = currentPlayerNum === 1;
     const playerName = currentPlayerNum === 1 ? "You" : `Player ${currentPlayerNum}`;
     const playerHand = gameState.players.find((p: any) => p.playerId === 1)?.hand || [];
     const bikes = gameState.bikes || [];
     const playerBikes = playerHand.map((bikeId: number) => bikes.find((b: any) => b.id === bikeId)).filter(Boolean);
+
+    // Declaration player info (for the modal)
+    const declarationPlayerNum = gameState.game.declarationPlayer || 1;
+    const declarationPlayerName = declarationPlayerNum === 1 ? "You" : `Player ${declarationPlayerNum}`;
 
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-4 flex flex-col gap-4">
@@ -458,7 +462,7 @@ export default function GameBoard() {
           declaredDirection={gameState.game.declaredDirection || "up"}
           currentBind={gameState.game.currentBind}
           bindValue={gameState.game.bindValue}
-          isYourTurn={isYourTurn}
+          isYourTurn={isYourTurn && gamePhase === 'playing'}
           fieldCards={gameState.fieldCards || []}
           onCardPlay={async (bikeIds: number[], bindDeclare?: any) => {
             try {
@@ -516,30 +520,18 @@ export default function GameBoard() {
           }}
           isLoading={playCardMutation.isPending || passMutation.isPending || drawCardMutation.isPending}
         />
-      </div>
-    );
-  }
 
-  // Show declaration phase
-  if (gamePhase === 'declaration') {
-    const declarationPlayer = gameState.game.declarationPlayer || 1;
-    const playerName = declarationPlayer === 1 ? "You" : `Player ${declarationPlayer}`;
-    
-    const currentHandIds = gameState.players.find((p: any) => p.playerId === 1)?.hand || [];
-    const currentHandBikes = currentHandIds
-      .map((id: number) => gameState.bikes?.find((b: any) => b.id === id))
-      .filter(Boolean);
-
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        <DeclarationPhase
-          playerName={playerName}
-          onDeclare={handleDeclaration}
-          isLoading={declareSpecMutation.isPending}
-          hand={currentHandBikes}
-          prevDeclaredSpec={gameState.game.prevDeclaredSpec}
-          prevDeclaredDirection={gameState.game.prevDeclaredDirection}
-        />
+        {/* DeclarationPhase as an overlay */}
+        {gamePhase === 'declaration' && (
+          <DeclarationPhase
+            playerName={declarationPlayerName}
+            onDeclare={handleDeclaration}
+            isLoading={declareSpecMutation.isPending}
+            hand={playerBikes}
+            prevDeclaredSpec={gameState.game.prevDeclaredSpec}
+            prevDeclaredDirection={gameState.game.prevDeclaredDirection}
+          />
+        )}
       </div>
     );
   }

@@ -69,8 +69,8 @@ export default function DeclarationPhase({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto py-4">
-      <div className="w-full max-w-lg mx-4 flex flex-col gap-4">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto py-4">
+      <div className="w-full max-w-lg mx-4 flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
         {/* Hand Display (collapsible) */}
         {hand.length > 0 && (
           <Card className="bg-slate-900/95 border-slate-600 p-4">

@@ -160,9 +160,9 @@ export default function CardPlayPhase({
           {isYourTurn ? "あなたのターン" : `${currentPlayerName}のターン`}
         </p>
         <p className="text-base sm:text-lg font-bold text-cyan-400 mt-1">
-          {getSpecLabel(declaredSpec)} - {declaredDirection === 'up' ? '高い順' : '低い順'}
+          {declaredSpec ? `${getSpecLabel(declaredSpec)} - ${declaredDirection === 'up' ? '高い順' : '低い順'}` : "スペック宣言中..."}
         </p>
-        {currentBind && bindValue && (
+        {declaredSpec && currentBind && bindValue && (
           <p className="text-xs text-pink-400 mt-2">
             縛り: {currentBind} = {bindValue}
           </p>
