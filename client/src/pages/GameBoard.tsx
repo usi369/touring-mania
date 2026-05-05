@@ -235,11 +235,23 @@ export default function GameBoard() {
   };
 
   const handleCPUDeclaration = async () => {
-    // CPU picks a random spec and direction
+    // CPU picks a random spec and direction, excluding previous declaration
     const specs = ['horsepower', 'fuelEfficiency', 'seatHeight', 'totalLength', 'weight', 'price', 'year'] as const;
     const directions = ['up', 'down'] as const;
-    const randomSpec = specs[Math.floor(Math.random() * specs.length)];
-    const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+    
+    const prevSpec = gameState?.game?.prevDeclaredSpec;
+    const prevDir = gameState?.game?.prevDeclaredDirection;
+    
+    // Build all valid combinations (excluding previous spec+direction)
+    const validCombinations: { spec: typeof specs[number]; direction: typeof directions[number] }[] = [];
+    for (const spec of specs) {
+      for (const dir of directions) {
+        if (spec === prevSpec && dir === prevDir) continue;
+        validCombinations.push({ spec, direction: dir });
+      }
+    }
+    
+    const chosen = validCombinations[Math.floor(Math.random() * validCombinations.length)];
 
     const specLabels: Record<string, string> = {
       horsepower: '馬力',
@@ -250,12 +262,12 @@ export default function GameBoard() {
       price: '価格',
       year: '発売年月日',
     };
-    const dirLabel = randomDirection === 'up' ? '大きい' : '小さい';
+    const dirLabel = chosen.direction === 'up' ? '大きい' : '小さい';
     const declPlayer = gameState?.game?.declarationPlayer || 2;
     
-    addToast('info', `Player ${declPlayer} が宣言：${specLabels[randomSpec]}が${dirLabel}ほうが勝ち`);
+    addToast('info', `Player ${declPlayer} が宣言：${specLabels[chosen.spec]}が${dirLabel}ほうが勝ち`);
     
-    await handleDeclaration(randomSpec, randomDirection);
+    await handleDeclaration(chosen.spec, chosen.direction);
   };
 
   const handleDeclaration = async (spec: string, direction: string) => {
@@ -525,6 +537,8 @@ export default function GameBoard() {
           onDeclare={handleDeclaration}
           isLoading={declareSpecMutation.isPending}
           hand={currentHandBikes}
+          prevDeclaredSpec={gameState.game.prevDeclaredSpec}
+          prevDeclaredDirection={gameState.game.prevDeclaredDirection}
         />
       </div>
     );

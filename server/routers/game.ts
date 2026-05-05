@@ -233,7 +233,12 @@ export const gameRouter = router({
           ids.forEach((id) => dealtBikes.add(id));
         });
 
-        // Store declaration
+        // Validate: cannot repeat the same spec+direction as previous declaration
+        if (game.prevDeclaredSpec === input.spec && game.prevDeclaredDirection === input.direction) {
+          throw new Error(`前回と同じ宣言（${input.spec} ${input.direction}）はできません`);
+        }
+
+        // Store declaration (clear prev once a new valid declaration is made)
         await db
           .update(games)
           .set({
@@ -474,6 +479,8 @@ export const gameRouter = router({
             .set({ 
               currentBind: null, 
               bindValue: null, 
+              prevDeclaredSpec: game.declaredSpec,
+              prevDeclaredDirection: game.declaredDirection,
               declaredSpec: null,
               declaredDirection: null,
               declarationPlayer: nextPlayer, // 勝者が次の宣言を行う

@@ -62,6 +62,8 @@ export const games = sqliteTable("games", {
   declarationPlayer: integer("declarationPlayer"), // Current declaration player ID (1-4)
   declaredSpec: text("declaredSpec", { length: 50 }), // Declared spec: "cylinders", "seatHeight", "totalLength", "price"
   declaredDirection: text("declaredDirection", { length: 10 }), // "up" or "down"
+  prevDeclaredSpec: text("prevDeclaredSpec", { length: 50 }), // Previous declared spec (cannot repeat same spec+direction)
+  prevDeclaredDirection: text("prevDeclaredDirection", { length: 10 }), // Previous declared direction
   currentBind: text("currentBind", { length: 50 }), // Current bind: "cylinders", "transmission", "maker", or null
   bindValue: text("bindValue", { length: 255 }), // The value of the bind condition
   createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),

@@ -12,6 +12,8 @@ interface DeclarationPhaseProps {
   onDeclare: (spec: SpecType, direction: DirectionType) => void;
   isLoading?: boolean;
   hand?: any[];
+  prevDeclaredSpec?: string | null;
+  prevDeclaredDirection?: string | null;
 }
 
 const SPEC_OPTIONS: { value: SpecType; label: string; unit: string }[] = [
@@ -29,11 +31,17 @@ export default function DeclarationPhase({
   onDeclare,
   isLoading = false,
   hand = [],
+  prevDeclaredSpec = null,
+  prevDeclaredDirection = null,
 }: DeclarationPhaseProps) {
   const [selectedSpec, setSelectedSpec] = useState<SpecType>("horsepower");
   const [selectedDirection, setSelectedDirection] = useState<DirectionType>("up");
   const [showDropdown, setShowDropdown] = useState(false);
   const [showHand, setShowHand] = useState(true);
+
+  // Check if current selection matches the banned previous declaration
+  const isBanned = selectedSpec === prevDeclaredSpec && selectedDirection === prevDeclaredDirection;
+  const hasBan = prevDeclaredSpec != null && prevDeclaredDirection != null;
 
   const handleDeclare = () => {
     onDeclare(selectedSpec, selectedDirection);
@@ -162,23 +170,42 @@ export default function DeclarationPhase({
             </div>
           </div>
 
+          {/* Banned declaration warning */}
+          {hasBan && (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-xs text-amber-400">
+                前回の宣言「{SPEC_OPTIONS.find(s => s.value === prevDeclaredSpec)?.label ?? prevDeclaredSpec}
+                {prevDeclaredDirection === 'up' ? ' ↑大きい' : ' ↓小さい'}」と同じ組み合わせは選べません
+              </p>
+            </div>
+          )}
+
           {/* Preview */}
-          <div className="mb-6 p-4 bg-slate-800/30 border border-slate-700 rounded-lg">
+          <div className={`mb-6 p-4 rounded-lg border ${
+            isBanned
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-slate-800/30 border-slate-700'
+          }`}>
             <p className="text-sm text-slate-400 mb-2">宣言内容:</p>
-            <p className="text-lg font-bold text-white">
+            <p className={`text-lg font-bold ${isBanned ? 'text-red-400' : 'text-white'}`}>
               {selectedSpecLabel}が
               {selectedDirection === "up" ? "大きい" : "小さい"}
               ほうが勝ち
+              {isBanned && <span className="text-sm ml-2">（選択不可）</span>}
             </p>
           </div>
 
           {/* Declare Button */}
           <Button
             onClick={handleDeclare}
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold py-3 rounded-lg"
+            disabled={isLoading || isBanned}
+            className={`w-full font-bold py-3 rounded-lg ${
+              isBanned
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white'
+            }`}
           >
-            {isLoading ? "宣言中..." : "宣言する"}
+            {isLoading ? "宣言中..." : isBanned ? "この組み合わせは宣言できません" : "宣言する"}
           </Button>
         </Card>
       </div>
