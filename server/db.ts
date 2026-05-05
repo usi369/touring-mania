@@ -846,6 +846,7 @@ export async function seedBikesInternal() {
           totalLength: bike.totalLength,
           year: bike.year,
           price: bike.price,
+          photoUrl: bike.photoUrl || null,
         }).execute();
       }
     });

@@ -43,6 +43,7 @@ export const bikes = sqliteTable("bikes", {
   totalLength: integer("totalLength").notNull(), // mm
   year: integer("year").notNull(),
   price: integer("price").notNull(), // 万円
+  photoUrl: text("photoUrl", { length: 500 }), // R2上のバイク画像URL
   createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
 });
 
