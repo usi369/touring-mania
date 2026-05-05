@@ -82,7 +82,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [toasts]);
 
-  const addToast = (
+  const addToast = React.useCallback((
     type: ToastType,
     title: string,
     message?: string,
@@ -91,18 +91,25 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const id = Math.random().toString(36).substr(2, 9);
     const newToast: ToastMessage = { id, type, title, message, duration };
     setToasts((prev) => [...prev, newToast]);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = React.useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
-  const clearToasts = () => {
+  const clearToasts = React.useCallback(() => {
     setToasts([]);
-  };
+  }, []);
+
+  const contextValue = React.useMemo(() => ({
+    toasts,
+    addToast,
+    removeToast,
+    clearToasts
+  }), [toasts, addToast, removeToast, clearToasts]);
 
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, clearToasts }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div 
         ref={scrollRef}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/components/Toast";
 
 interface CardPlayPhaseProps {
   currentPlayer: number;
@@ -56,6 +57,7 @@ export default function CardPlayPhase({
   onDraw,
   isLoading = false,
 }: CardPlayPhaseProps) {
+  const { addToast } = useToast();
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [showBindDialog, setShowBindDialog] = useState(false);
   const [selectedBindType, setSelectedBindType] = useState<string | null>(null);

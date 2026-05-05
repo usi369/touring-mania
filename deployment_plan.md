@@ -1,100 +1,30 @@
-# Touring Mania プロジェクト管理・引き継ぎドキュメント
+# Touring Mania Deployment & Bug Fix Plan
 
-このドキュメントは、Touring Mania プロジェクトのインフラ構成、開発環境のセットアップ、およびこれまでの実装内容をまとめたものです。第三者や別の環境で作業を開始する際のガイドとして使用してください。
+## 現在のステータス
+* Cloudflare Pages & Workers, D1へのデプロイを構築中
+* 本番環境 (`https://touring-mania-vite.pages.dev/`) にて、カードプレイ時に React Error #185 (Maximum update depth exceeded) が発生する致命的なバグが存在した。
 
----
+## 今回の実装内容とバグ修正 (Error 185)
+1. **ToastProvider の無限ループ（再レンダリング）の修正**
+   * **原因**: `ToastContext.tsx` 内で提供されている関数 (`addToast`, `removeToast`, `clearToasts`) がメモ化されておらず、`ToastProvider` が再レンダリングされる度に新しい参照が生成されていた。これが、`useToast` を依存配列に含む各コンポーネント（例: `GameBoard.tsx` の `useEffect`）で意図しない無限再レンダリングや状態更新ループのトリガーになっていた可能性が高い。
+   * **対策**: 全てのContext提供関数を `React.useCallback` でラップし、`value` オブジェクトを `React.useMemo` でメモ化した。
+2. **CardPlayPhase における addToast の ReferenceError 修正**
+   * **原因**: バリデーションエラー発生時に `addToast('error', ...)` を呼び出していたが、コンポーネント内で `useToast` フックがインポート・宣言されておらず、JavaScriptの実行時エラー (`ReferenceError`) が裏で発生していた。
+   * **対策**: `import { useToast } from "@/components/Toast";` を追加し、コンポーネント内で `const { addToast } = useToast();` を宣言して正しく呼び出せるように修正した。
+3. **対戦相手の手札（カテゴリ内訳）UIの実装**
+   * `GameBoard.tsx` に、大型・中型・小型バイクの所持枚数を表示するUIを追加した。
 
-## 1. インフラ構成と接続情報
+## 次のフェーズのタスク (フェーズ15以降)
+ユーザーの指示の通り、ゲーム体験の完成を最優先としています。
+以下の順序で進める予定です。
+1. **ゲーム機能のテストとUIの洗練**
+   * エラーが完全に解消されたかを確認するため、本番環境で実際にゲームを数ラウンドプレイする。
+   * 勝敗判定（`gamePhase === 'finished'`）時の `GameResultScreen` が正しく表示されるか確認する。
+2. **OAuthログイン機能の実装（フェーズ15）**
+   * 上記のゲーム体験の安定が確認でき次第、認証システムの統合に入る。
+3. **R2連携設定**
+   * メディアや画像の保存のためのCloudflare R2との連携。
 
-本プロジェクトは Cloudflare のサーバーレスアーキテクチャに完全に移行されています。
-
-- **フロントエンド**: Cloudflare Pages (`https://touring-mania-vite.pages.dev/`)
-- **バックエンド**: Cloudflare Workers (Pages Functions 構成)
-- **データベース**: Cloudflare D1 (Serverless SQL)
-- **ソース管理**: GitHub (`usi369/touring-mania`)
-- **自動デプロイ**: GitHub の `main` ブランチへプッシュされると、Cloudflare Pages 上で自動ビルド・デプロイが実行されます。
-
-### 主要なリソース情報
-- **D1 データベース名**: `touring-mania-db`
-- **D1 データベースID**: `ef22a166-d951-41c1-8317-3195dbd37048`
-- **Wrangler プロジェクト名**: `touring-mania`
-
----
-
-## 2. 環境セットアップ
-
-作業を開始する前に、プロジェクトルートに `.env` ファイルを作成し、以下の変数を設定してください。
-
-### 必須の環境変数 (.env)
-```bash
-# Cloudflare API 操作用 (Wrangler/Drizzle-kit で使用)
-CLOUDFLARE_ACCOUNT_ID=xxxx  # Cloudflare ダッシュボードから取得
-CLOUDFLARE_API_TOKEN=xxxx   # D1/Pages 操作権限を持つトークン
-
-# アプリケーション設定
-JWT_SECRET=xxxx            # セッション署名用の任意の文字列
-```
-
-### 依存関係のインストール
-```bash
-npm install
-# または
-pnpm install
-```
-
----
-
-## 3. 開発・運用コマンド
-
-### ローカル開発
-```bash
-# クライアント・サーバー両方の起動
-npm run dev
-```
-
-### データベース管理 (D1)
-```bash
-# マイグレーションの作成 (スキーマ変更後)
-npx drizzle-kit generate
-
-# ローカル D1 へのマイグレーション適用
-npm run db:push
-
-# リモート D1 へのマイグレーション適用
-npx wrangler d1 migrations apply touring-mania-db --remote
-
-# データのシード (bikes_data.json を元に投入)
-node seed-bikes.mjs  # 必要に応じてパスや環境変数を調整
-```
-
-### デプロイ
-```bash
-# 手動デプロイ (通常は git push で自動実行されます)
-npm run deploy
-```
-
----
-
-## 4. 実装済み機能のサマリー
-
-詳細は `todo.md` を参照してください。
-
-- **フェーズ 1-7**: ゲームのコアロジック（サイコロ、カード配布、スペック宣言、勝利判定）および基本UIの完成。
-- **フェーズ 8-14**: ゲストモード、バイク図鑑、ルール説明画面、複数ラウンド対応、スコアボードの実装完了。
-- **インフラ移行**: Node.js/Express から Cloudflare Workers/Drizzle ORM/D1 への完全移行完了。
-
----
-
-## 5. 現在のフェーズと今後の課題
-
-### フェーズ 15: OAuth ログインの実装 (進行中)
-- Manus SDK を利用した OAuth 連携の統合。
-- `/api/oauth/login` エンドポイントの実装とフロントエンドの紐付け。
-
-### 懸念事項・技術的課題
-- **アセット管理**: 現在、バイク画像は暫定的な参照になっています。将来的に Cloudflare R2 への移行を検討中です（フェーズ 2.5 相当）。
-- **マルチプレイヤー**: 現在は CPU 対戦がメインです。リアルタイム通信が必要なオンライン対戦機能の拡張が課題です。
-
----
-最終更新日: 2026-05-05
-更新者: Antigravity
+## 引き継ぎ・第三者向けの特記事項
+* `CardPlayPhase.tsx` 内での状態管理（特に `selectedCards` や `showBindDialog`）は安定していますが、UI操作が早い場合のRace Conditionを防ぐため、`isLoading` プロパティを上位から正しく渡す（現状はデフォルト `false`）ことが将来的な課題です。
+* ローカル環境で `wrangler dev` を実行する際は、WindowsのExecutionPolicy制限に引っかかる場合があるため、`powershell -ExecutionPolicy Bypass -Command "npm run dev"` での起動を推奨します。
