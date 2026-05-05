@@ -129,8 +129,9 @@
 - [x] Test all features together
 - [x] Create final checkpoint
 
-## Phase 15: Full OAuth Integration (IN PROGRESS)
-- [ ] Implement /api/oauth/login server endpoint
-- [ ] Connect "Login to Start" button in Home.tsx
-- [ ] Implement user profile display
-- [ ] Implement logout functionality
+## Phase 15: Game Experience Polish (IN PROGRESS)
+- [x] Show CPU hand details (Large/Medium/Small counts) in GameBoard
+- [ ] Requirements gathering for missing game features
+- [ ] UI/UX improvements and animations
+- [ ] Core gameplay adjustments
+
