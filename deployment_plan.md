@@ -1,103 +1,100 @@
-このドキュメントは、現在ローカル環境で開発中の Touring Mania プロジェクトを GitHub で管理し、Cloudflare (Pages/Workers/D1/R2) を用いてネット公開するための手順と、その構成をまとめたものです。
+# Touring Mania プロジェクト管理・引き継ぎドキュメント
+
+このドキュメントは、Touring Mania プロジェクトのインフラ構成、開発環境のセットアップ、およびこれまでの実装内容をまとめたものです。第三者や別の環境で作業を開始する際のガイドとして使用してください。
 
 ---
 
-## 0. 技術スタック (Tech Stack)
+## 1. インフラ構成と接続情報
 
-このプロジェクトは以下の技術およびサービスを使用して構成されています。
+本プロジェクトは Cloudflare のサーバーレスアーキテクチャに完全に移行されています。
 
-### フロントエンド (Frontend)
-- **Framework**: React 19 (Vite)
-- **Styling**: Tailwind CSS, Lucide React (Icons), Radix UI (Components)
-- **State Management**: TanStack Query (React Query)
-- **API Client**: tRPC Client (Type-safe API calls)
-- **Deployment**: Cloudflare Pages
+- **フロントエンド**: Cloudflare Pages (`https://touring-mania-vite.pages.dev/`)
+- **バックエンド**: Cloudflare Workers (Pages Functions 構成)
+- **データベース**: Cloudflare D1 (Serverless SQL)
+- **ソース管理**: GitHub (`usi369/touring-mania`)
+- **自動デプロイ**: GitHub の `main` ブランチへプッシュされると、Cloudflare Pages 上で自動ビルド・デプロイが実行されます。
 
-### バックエンド (Backend)
-- **Runtime**: Cloudflare Workers (V8 Runtime)
-  - ※ 移行前: Node.js / Express
-- **API Framework**: tRPC Server
-- **Authentication**: OAuth (Manus / Google 等)
-- **Language**: TypeScript
-
-### データベース & ストレージ (Database & Storage)
-- **ORM**: Drizzle ORM
-- **Database**: Cloudflare D1 (Serverless SQL Database)
-  - ※ 移行前: Local SQLite (better-sqlite3)
-- **Object Storage**: Cloudflare R2 (S3-compatible)
-  - ※ 移行前: AWS S3
-
----
-## 役割分担 (Roles and Responsibilities)
-
-| カテゴリ | 項目 | Antigravity (AI) | ユーザー (USER) | 備考 |
-| :--- | :--- | :---: | :---: | :--- |
-| **ソース管理** | GitHub へのプッシュ / 同期 | ✅ 可能 | ✅ 可能 | AI が自動でコミット・プッシュ可能 |
-| **データベース** | Cloudflare D1 クエリ実行 / シード | ✅ 可能 | ✅ 可能 | `wrangler d1 execute` で操作可能 |
-| **デプロイ** | Cloudflare Pages へのデプロイ | ✅ 可能 | ✅ 可能 | `npm run deploy` で実行可能 |
-| **インフラ設定** | Cloudflare ダッシュボード上での設定 | ❌ 不可 | ✅ 可能 | バインディングや秘密鍵の登録はブラウザで実行 |
-| **秘密情報** | `.env` ファイル等の管理 | ❌ 不可 | ✅ 可能 | セキュリティ上、ユーザーが手動で管理 |
-| **アセット** | Cloudflare R2 (バケット作成・管理) | ⚠️ 未着手 | ⚠️ 未着手 | フェーズ 2.5 で対応予定 |
-
-## 1. タスクリスト
-
-### フェーズ 1: GitHub 管理の開始
-- [x] .gitignore の再確認
-    - `local.db` や `.env` など、秘匿情報やローカル限定のファイルが含まれていないか確認する。
-- [x] GitHub リポジトリの作成
-- [x] Git 初期化とリモート追加
-    - `git init`
-    - `git remote add origin <URL>`
-- [x] ソースコードの初コミットとプッシュ
-
-### フェーズ 2: データベースの移行 (SQLite -> Cloudflare D1)
-- [x] Cloudflare D1 データベースの作成
-- [x] Drizzle ORM のドライバー変更
-- [x] マイグレーションファイルの適用
-- [x] データのシード (必要に応じて)
-
-### フェーズ 2.5: アセット管理の移行 (AWS S3 -> Cloudflare R2) [一旦スキップ]
-- [ ] Cloudflare R2 バケットの作成
-- [ ] バケットの公開設定 (Public Access) またはカスタムドメインの設定
-- [ ] ストレージ・クライアントの修正
-- [ ] 画像データのアップロード
-
-### フェーズ 3: サーバーサイドの改修 (Node.js/Express -> Cloudflare Workers)
-- [x] tRPC アダプターの変更
-- [x] OAuth 処理の書き換え
-- [x] 依存ライブラリのチェック
-
-### フェーズ 4: フロントエンドのデプロイ
-- [ ] Cloudflare Pages のセットアップ
-- [ ] ビルド設定の構成
-    - `npm run build` コマンドと `dist` ディレクトリの指定。
-- [ ] 環境変数の設定
-    - Cloudflare ダッシュボード上で API エンドポイントや AWS S3 の認証情報を設定。
-
-### フェーズ 5: 公開と検証
-- [ ] ドメインの設定 (必要に応じて)
-- [ ] 動作確認
-    - ログイン処理、データの取得、ゲームの実行、S3 への画像アクセスなどが正常に行えるか確認。
+### 主要なリソース情報
+- **D1 データベース名**: `touring-mania-db`
+- **D1 データベースID**: `ef22a166-d951-41c1-8317-3195dbd37048`
+- **Wrangler プロジェクト名**: `touring-mania`
 
 ---
 
-## 2. 懸念事項・技術的課題
+## 2. 環境セットアップ
 
-### データベースの制約 (Cloudflare D1)
-- **互換性**: 現在使用している `better-sqlite3` は Node.js のネイティブモジュールであり、Workers 環境では動作しません。Drizzle ORM を使用しているためコードの多くは共通化できますが、接続部分の書き換えが必須です。
-- **制限**: D1 には保存容量やクエリ実行時間の制限があるため、将来的にデータ量が増えた場合の考慮が必要です。
+作業を開始する前に、プロジェクトルートに `.env` ファイルを作成し、以下の変数を設定してください。
 
-### サーバー実行環境の差異 (Runtime)
-- **Express の非互換性**: Workers は Node.js そのものではなく、V8 準拠のランタイムであるため、Express がそのままでは動作しません。Workers 向けに軽量なルーティングライブラリ (Hono 等) を導入するか、tRPC の標準アダプターに移行する必要があります。
-- **リソース制限**: Workers には 1 リクエストあたりの CPU 時間やメモリ使用量に制限があります。複雑な AI 処理 (`cpuAI.ts`) などが制限に抵触しないか検証が必要です。
+### 必須の環境変数 (.env)
+```bash
+# Cloudflare API 操作用 (Wrangler/Drizzle-kit で使用)
+CLOUDFLARE_ACCOUNT_ID=xxxx  # Cloudflare ダッシュボードから取得
+CLOUDFLARE_API_TOKEN=xxxx   # D1/Pages 操作権限を持つトークン
 
-### 認証と OAuth
-- **コールバック URL**: 公開に伴い、Google 等の OAuth プロバイダー側で許可するリダイレクト URI を Cloudflare のドメインに変更する必要があります。
-- **セッション管理**: Cookie や JWT の扱いが Workers のセキュリティモデルに適しているか確認が必要です。
+# アプリケーション設定
+JWT_SECRET=xxxx            # セッション署名用の任意の文字列
+```
 
-### AWS S3 の利用
-- **認証情報**: 現在 `dotenv` で管理している AWS のアクセスキー等を Cloudflare の Secret として安全に管理する必要があります。
-- **リージョン制限**: Workers から S3 へのアクセスにおいて、レイテンシや通信制限の問題がないか確認が必要です。
+### 依存関係のインストール
+```bash
+npm install
+# または
+pnpm install
+```
 
-### プロジェクト構造
-- **構成の選択**: 現在 `server` と `client` が混在しています。Cloudflare Pages (Full-stack) 構成にするか、Pages (Frontend) + Workers (Backend) に分離するか、開発のしやすさとデプロイの容易さを考慮して決定する必要があります。
+---
+
+## 3. 開発・運用コマンド
+
+### ローカル開発
+```bash
+# クライアント・サーバー両方の起動
+npm run dev
+```
+
+### データベース管理 (D1)
+```bash
+# マイグレーションの作成 (スキーマ変更後)
+npx drizzle-kit generate
+
+# ローカル D1 へのマイグレーション適用
+npm run db:push
+
+# リモート D1 へのマイグレーション適用
+npx wrangler d1 migrations apply touring-mania-db --remote
+
+# データのシード (bikes_data.json を元に投入)
+node seed-bikes.mjs  # 必要に応じてパスや環境変数を調整
+```
+
+### デプロイ
+```bash
+# 手動デプロイ (通常は git push で自動実行されます)
+npm run deploy
+```
+
+---
+
+## 4. 実装済み機能のサマリー
+
+詳細は `todo.md` を参照してください。
+
+- **フェーズ 1-7**: ゲームのコアロジック（サイコロ、カード配布、スペック宣言、勝利判定）および基本UIの完成。
+- **フェーズ 8-14**: ゲストモード、バイク図鑑、ルール説明画面、複数ラウンド対応、スコアボードの実装完了。
+- **インフラ移行**: Node.js/Express から Cloudflare Workers/Drizzle ORM/D1 への完全移行完了。
+
+---
+
+## 5. 現在のフェーズと今後の課題
+
+### フェーズ 15: OAuth ログインの実装 (進行中)
+- Manus SDK を利用した OAuth 連携の統合。
+- `/api/oauth/login` エンドポイントの実装とフロントエンドの紐付け。
+
+### 懸念事項・技術的課題
+- **アセット管理**: 現在、バイク画像は暫定的な参照になっています。将来的に Cloudflare R2 への移行を検討中です（フェーズ 2.5 相当）。
+- **マルチプレイヤー**: 現在は CPU 対戦がメインです。リアルタイム通信が必要なオンライン対戦機能の拡張が課題です。
+
+---
+最終更新日: 2026-05-05
+更新者: Antigravity

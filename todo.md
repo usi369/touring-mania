@@ -80,7 +80,7 @@
 ## Phase 8: Final Deployment (COMPLETED)
 - [x] Create final checkpoint (version: 855ec26a)
 - [x] Project deployed to Manus platform
-- [x] Domain assigned: touringman-fu4s4sbg.manus.space
+- [x] Domain assigned: touring-mania-vite.pages.dev
 - [x] All features verified and working
 
 ## Phase 9: Guest Mode Implementation (COMPLETED)
@@ -128,3 +128,9 @@
 - [x] Verify rules screen display (visible in Home screen)
 - [x] Test all features together
 - [x] Create final checkpoint
+
+## Phase 15: Full OAuth Integration (IN PROGRESS)
+- [ ] Implement /api/oauth/login server endpoint
+- [ ] Connect "Login to Start" button in Home.tsx
+- [ ] Implement user profile display
+- [ ] Implement logout functionality
