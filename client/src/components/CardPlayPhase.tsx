@@ -253,7 +253,7 @@ export default function CardPlayPhase({
       {isYourTurn && (
         <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4">
           <p className="text-xs text-slate-400 mb-3">カードを選択してください（← 横スクロールできます →）</p>
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
             {playerHand.map((bike: any) => {
               const selectionIndex = selectedCards.indexOf(bike.id);
               const isSelected = selectionIndex !== -1;
