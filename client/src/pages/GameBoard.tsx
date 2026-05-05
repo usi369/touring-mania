@@ -391,6 +391,57 @@ export default function GameBoard() {
           </button>
         </div>
 
+        {/* Opponent Cards Display Area */}
+        <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4 flex flex-col items-center justify-center mb-1">
+          <p className="text-slate-400 text-xs sm:text-sm mb-2 sm:mb-3">対戦相手の手札</p>
+          <div className={`grid gap-2 sm:gap-4 w-full ${
+            gameState.players.length === 2 ? 'grid-cols-1 max-w-[240px]' : 
+            gameState.players.length === 3 ? 'grid-cols-2' : 
+            'grid-cols-3'
+          }`}>
+            {gameState.players.slice(1).map((player: any) => {
+              const cpuBikes = player.hand.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
+              const largeCount = cpuBikes.filter((b: any) => b.category === 'large').length;
+              const mediumCount = cpuBikes.filter((b: any) => b.category === 'medium').length;
+              const smallCount = cpuBikes.filter((b: any) => b.category === 'small').length;
+              
+              return (
+                <div
+                  key={player.playerId}
+                  className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 rounded-lg flex flex-col items-center justify-center p-2 sm:p-3 w-full h-full shadow-sm"
+                >
+                  <p className="text-[10px] sm:text-xs text-slate-400 mb-0.5 font-bold">Player {player.playerId}</p>
+                  <div className="flex items-baseline gap-1 mb-1.5">
+                    <p className="text-lg sm:text-xl font-bold text-slate-200">{player.hand.length}</p>
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 font-medium">枚</p>
+                  </div>
+                  
+                  {player.hand.length > 0 ? (
+                    <div className="flex gap-1 w-full justify-center">
+                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
+                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">大型</span>
+                        <span className={`text-[10px] sm:text-xs font-bold ${largeCount > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{largeCount}</span>
+                      </div>
+                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
+                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">中型</span>
+                        <span className={`text-[10px] sm:text-xs font-bold ${mediumCount > 0 ? 'text-cyan-400' : 'text-slate-600'}`}>{mediumCount}</span>
+                      </div>
+                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
+                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">小型</span>
+                        <span className={`text-[10px] sm:text-xs font-bold ${smallCount > 0 ? 'text-pink-400' : 'text-slate-600'}`}>{smallCount}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[9px] sm:text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      上がり
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <CardPlayPhase
           currentPlayer={currentPlayerNum}
           currentPlayerName={playerName}
@@ -519,52 +570,18 @@ export default function GameBoard() {
       <div className="flex-1 flex flex-col gap-4">
         {/* Opponent Cards Display Area */}
         <div className="flex-1 bg-slate-800/30 border border-slate-700 rounded-lg p-4 flex flex-col items-center justify-center">
-          <p className="text-slate-400 text-sm mb-4">対戦相手の手札</p>
-          <div className={`grid gap-2 sm:gap-4 w-full ${
-            gameState.players.length === 2 ? 'grid-cols-1 max-w-[240px]' : 
-            gameState.players.length === 3 ? 'grid-cols-2' : 
-            'grid-cols-3'
-          }`}>
-            {gameState.players.slice(1).map((player: any) => {
-              const cpuBikes = player.hand.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
-              const largeCount = cpuBikes.filter((b: any) => b.category === 'large').length;
-              const mediumCount = cpuBikes.filter((b: any) => b.category === 'medium').length;
-              const smallCount = cpuBikes.filter((b: any) => b.category === 'small').length;
-              
-              return (
-                <div
-                  key={player.playerId}
-                  className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 rounded-lg flex flex-col items-center justify-center p-3 sm:p-4 w-full h-full min-h-[110px] shadow-sm"
-                >
-                  <p className="text-xs sm:text-sm text-slate-400 mb-1 font-bold">Player {player.playerId}</p>
-                  <div className="flex items-baseline gap-1 mb-2">
-                    <p className="text-xl sm:text-2xl font-bold text-slate-200">{player.hand.length}</p>
-                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium">枚</p>
-                  </div>
-                  
-                  {player.hand.length > 0 ? (
-                    <div className="flex gap-1 sm:gap-2 w-full justify-center">
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded-md px-2 py-1 flex-1 max-w-[40px] sm:max-w-[50px] border border-slate-700/50">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium mb-0.5">大型</span>
-                        <span className={`text-xs sm:text-sm font-bold ${largeCount > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{largeCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded-md px-2 py-1 flex-1 max-w-[40px] sm:max-w-[50px] border border-slate-700/50">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium mb-0.5">中型</span>
-                        <span className={`text-xs sm:text-sm font-bold ${mediumCount > 0 ? 'text-cyan-400' : 'text-slate-600'}`}>{mediumCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded-md px-2 py-1 flex-1 max-w-[40px] sm:max-w-[50px] border border-slate-700/50">
-                        <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium mb-0.5">小型</span>
-                        <span className={`text-xs sm:text-sm font-bold ${smallCount > 0 ? 'text-pink-400' : 'text-slate-600'}`}>{smallCount}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-amber-500 font-bold bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                      上がり
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <p className="text-slate-400 text-sm mb-4">対戦相手のカード</p>
+          <div className="grid grid-cols-2 gap-2 w-full">
+            {gameState.players.slice(1).map((player: any) => (
+              <div
+                key={player.playerId}
+                className="aspect-square bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 rounded-lg flex flex-col items-center justify-center"
+              >
+                <p className="text-xs text-slate-400 mb-1">Player {player.playerId}</p>
+                <p className="text-2xl font-bold text-slate-300">?</p>
+                <p className="text-xs text-slate-500 mt-1">{player.hand.length} 枚</p>
+              </div>
+            ))}
           </div>
         </div>
 
