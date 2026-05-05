@@ -314,16 +314,9 @@ export default function GameBoard() {
       <GameResultScreen
         rankings={finalRankings}
         playerCount={gameState.game.playerCount}
-        onReplay={async () => {
-          try {
-            clearToasts();
-            const result = await gameSetupMutation.mutateAsync({
-              playerCount: gameState.game.playerCount,
-            });
-            setLocation(`/game/play?gameId=${result.gameId}&new=true`);
-          } catch (error) {
-            console.error("Error creating new game:", error);
-          }
+        onReplay={() => {
+          clearToasts();
+          setLocation("/game/setup");
         }}
         onHome={() => {
           clearToasts();
