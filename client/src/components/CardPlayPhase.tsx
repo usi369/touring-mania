@@ -174,7 +174,7 @@ export default function CardPlayPhase({
         <p className="text-xs text-amber-400 mb-2">場の履歴（左が最新）</p>
         
         {fieldCards.length > 0 ? (
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-4 pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
             {fieldCards.map((fc: any, recordIdx: number) => {
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
