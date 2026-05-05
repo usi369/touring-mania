@@ -267,7 +267,10 @@ export default function GameBoard() {
           direction: direction as any,
         });
         // Refresh game state to get bike data before entering play phase
-        await getStateQuery.refetch();
+        const res = await getStateQuery.refetch();
+        if (res.data) {
+          setGameState(res.data);
+        }
         setGamePhase('playing');
       } catch (error) {
         console.error('Error declaring spec:', error);
