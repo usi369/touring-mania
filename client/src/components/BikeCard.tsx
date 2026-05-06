@@ -26,6 +26,7 @@ interface BikeCardProps {
   showDetails?: boolean;
   size?: "small" | "medium" | "large";
   activeSpec?: string;
+  isPokerRatio?: boolean;
 }
 
 const SPEC_ITEMS = [
@@ -45,6 +46,7 @@ export default function BikeCard({
   showDetails = false,
   size = "medium",
   activeSpec,
+  isPokerRatio = false,
 }: BikeCardProps) {
   const [showModal, setShowModal] = useState(false);
 
@@ -66,20 +68,21 @@ export default function BikeCard({
       <Card
         onClick={handleCardClick}
         className={`
-          ${sizeClasses[size]}
+          ${isPokerRatio ? "w-full aspect-[63/88]" : sizeClasses[size]}
           bg-gradient-to-br from-cyan-500/20 to-pink-500/20 
-          border-2 rounded-lg flex flex-col items-center justify-center 
-          cursor-pointer transition-all duration-200
+          border-2 rounded-xl flex flex-col items-center
+          cursor-pointer transition-all duration-300 relative overflow-hidden
+          ${isPokerRatio ? "p-3 sm:p-5" : ""}
           ${isSelected 
-            ? "border-cyan-400 shadow-lg shadow-cyan-400/50 scale-105" 
-            : "border-cyan-500/50 hover:border-cyan-400"
+            ? "border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105 z-10" 
+            : "border-white/10 hover:border-white/30"
           }
-          ${showDetails ? "hover:shadow-lg" : ""}
+          ${showDetails ? "hover:shadow-2xl" : ""}
         `}
       >
-        <div className="w-full flex flex-col h-full text-center">
+        <div className="w-full flex flex-col h-full text-center relative z-10">
           {/* Header Info */}
-          <div className="mb-3">
+          <div className={`${isPokerRatio ? "mb-2 sm:mb-4" : "mb-3"}`}>
             <p className="text-[12px] font-bold text-cyan-400 uppercase tracking-widest mb-0.5">
               {bike.maker}
             </p>
@@ -104,7 +107,7 @@ export default function BikeCard({
               </div>
 
               {/* Bike Image */}
-              <div className="w-full aspect-[4/3] bg-slate-800/50 rounded-md overflow-hidden mb-3 border border-white/5">
+              <div className={`w-full ${isPokerRatio ? "aspect-[1.4/1]" : "aspect-[4/3]"} bg-slate-950/60 rounded-lg overflow-hidden mb-3 border border-white/10 shadow-inner`}>
                 {bike.photoUrl ? (
                   <img 
                     src={bike.photoUrl} 
@@ -122,7 +125,7 @@ export default function BikeCard({
               </div>
 
               {/* Quick Specs List */}
-              <div className="space-y-1 mt-auto border-t border-white/10 pt-3">
+              <div className={`space-y-1 mt-auto border-t border-white/10 ${isPokerRatio ? "pt-2 sm:pt-4" : "pt-3"}`}>
                 {SPEC_ITEMS.map((spec) => {
                   const isActive = spec.key === activeSpec;
                   return (
