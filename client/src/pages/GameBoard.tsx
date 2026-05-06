@@ -46,6 +46,7 @@ export default function GameBoard() {
   // Game Log States
   const [gameLogs, setGameLogs] = useState<LogEntry[]>([]);
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Centralized logging function
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -57,8 +58,22 @@ export default function GameBoard() {
     };
     setGameLogs(prev => [...prev, newLog]);
     
+    // Increment unread count if log is closed
+    if (!isLogOpen) {
+      setUnreadCount(prev => prev + 1);
+    }
+    
     // Also show as toast for immediate feedback
     addToast(type === 'warning' ? 'error' : type, message);
+  };
+
+  // Toggle log window and reset unread count
+  const toggleLog = () => {
+    const newOpenState = !isLogOpen;
+    setIsLogOpen(newOpenState);
+    if (newOpenState) {
+      setUnreadCount(0);
+    }
   };
   
   const getStateQuery = trpc.game.getState.useQuery(
@@ -546,8 +561,9 @@ export default function GameBoard() {
         <GameLog 
           logs={gameLogs} 
           isOpen={isLogOpen} 
+          unreadCount={unreadCount}
           onClose={() => setIsLogOpen(false)} 
-          onToggle={() => setIsLogOpen(!isLogOpen)} 
+          onToggle={toggleLog} 
         />
 
         {/* DeclarationPhase as an overlay */}

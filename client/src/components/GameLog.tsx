@@ -14,11 +14,12 @@ export interface LogEntry {
 interface GameLogProps {
   logs: LogEntry[];
   isOpen: boolean;
+  unreadCount: number;
   onClose: () => void;
   onToggle: () => void;
 }
 
-export default function GameLog({ logs, isOpen, onClose, onToggle }: GameLogProps) {
+export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }: GameLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new logs arrive or opened
@@ -44,9 +45,9 @@ export default function GameLog({ logs, isOpen, onClose, onToggle }: GameLogProp
           )}
         >
           <ScrollText className="w-6 h-6 text-white" />
-          {logs.length > 0 && !isOpen && (
+          {unreadCount > 0 && !isOpen && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-slate-900 animate-bounce">
-              {logs.length > 99 ? '99+' : logs.length}
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </Button>
