@@ -238,7 +238,7 @@ export const gameRouter = router({
           throw new Error(`前回と同じ宣言（${input.spec} ${input.direction}）はできません`);
         }
 
-        // Store declaration (clear prev once a new valid declaration is made)
+        // Store declaration
         await db
           .update(games)
           .set({
@@ -249,17 +249,48 @@ export const gameRouter = router({
           .where(eq(games.id, input.gameId));
 
         let firstCard = null;
-        if (alreadyPlayed.length === 0) {
-          const availableBikes = allBikes.filter((b: any) => !dealtBikes.has(b.id));
-          if (availableBikes.length > 0) {
-            const randomBike = availableBikes[Math.floor(Math.random() * availableBikes.length)];
+        // Check if we need to put a new card on the field (if field is currently empty)
+        const currentField = await db
+          .select()
+          .from(playedCards)
+          .where(eq(playedCards.gameId, input.gameId))
+          .limit(1);
+
+        if (currentField.length === 0) {
+          // Draw from decks instead of allBikes to avoid duplicates
+          const gameDecks = await db
+            .select()
+            .from(decks)
+            .where(eq(decks.gameId, input.gameId));
+          
+          const nonEmptyDecks = gameDecks.filter((d: any) => {
+            const ids = JSON.parse(d.bikeIds);
+            return ids.length > 0;
+          });
+
+          if (nonEmptyDecks.length > 0) {
+            // Pick the first available deck for the dealer card
+            const selectedDeck = nonEmptyDecks[0];
+            const deckIds = JSON.parse(selectedDeck.bikeIds);
+            const drawnId = deckIds[0];
+            const remainingDeckIds = deckIds.slice(1);
+
+            // Update deck
+            await db
+              .update(decks)
+              .set({ bikeIds: JSON.stringify(remainingDeckIds) })
+              .where(eq(decks.id, selectedDeck.id));
+
             // Place on table as played by "dealer" (player 0)
             await db.insert(playedCards).values({
               gameId: input.gameId,
               playerId: 0, // 0 = dealer / field card
-              bikeIds: JSON.stringify([randomBike.id]),
+              bikeIds: JSON.stringify([drawnId]),
             });
-            firstCard = randomBike;
+
+            // Get bike details for return
+            const bikeRecord = await db.select().from(bikes).where(eq(bikes.id, drawnId)).limit(1);
+            firstCard = bikeRecord[0];
           }
         }
 
@@ -633,30 +664,34 @@ export const gameRouter = router({
           ? JSON.parse(playerState[0].hand) 
           : playerState[0].hand || [];
 
-        // Get all player hands to exclude already dealt cards
-        const allPlayerStates = await db
+        // MUST draw from the decks table to ensure no duplicates
+        const gameDecks = await db
           .select()
-          .from(gameStates)
-          .where(eq(gameStates.gameId, input.gameId));
-
-        const dealtBikes = new Set<number>();
-        allPlayerStates.forEach((state: any) => {
-          const stateHand = typeof state.hand === 'string' 
-            ? JSON.parse(state.hand) 
-            : state.hand || [];
-          stateHand.forEach((bikeId: number) => dealtBikes.add(bikeId));
+          .from(decks)
+          .where(eq(decks.gameId, input.gameId));
+        
+        const nonEmptyDecks = gameDecks.filter((d: any) => {
+          const ids = JSON.parse(d.bikeIds);
+          return ids.length > 0;
         });
         
-        // Find available bikes not yet dealt
-        const availableBikes = allBikes.filter((b: any) => !dealtBikes.has(b.id));
-        
-        if (availableBikes.length === 0) {
-          throw new Error("No cards available to draw");
+        if (nonEmptyDecks.length === 0) {
+          throw new Error("No cards available in the deck");
         }
 
-        // Draw random bike
-        const randomBike = availableBikes[Math.floor(Math.random() * availableBikes.length)];
-        const updatedHand = [...hand, randomBike.id];
+        // Pick a random non-empty category
+        const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
+        const deckIds = JSON.parse(selectedDeck.bikeIds);
+        const drawnId = deckIds[0];
+        const remainingDeckIds = deckIds.slice(1);
+
+        // Update deck in DB
+        await db
+          .update(decks)
+          .set({ bikeIds: JSON.stringify(remainingDeckIds) })
+          .where(eq(decks.id, selectedDeck.id));
+
+        const updatedHand = [...hand, drawnId];
 
         // Update player hand
         await db

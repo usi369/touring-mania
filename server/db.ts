@@ -162,11 +162,17 @@ export async function initializeGame(userId: number, playerCount: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Get all bikes
+  // Get all bikes and pick exactly 32 for the round (R7 requirement)
   const allBikes = await db.select().from(bikes);
-  const bikeIds = allBikes.map(b => b.id);
+  
+  // Pick 32 random bikes if there are more, or use all if 32 or fewer
+  const selectedBikes = [...allBikes]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 32);
+  
+  const bikeIds = selectedBikes.map(b => b.id);
 
-  // Shuffle bikes
+  // Shuffle selected bikes
   const shuffled = [...bikeIds].sort(() => Math.random() - 0.5);
 
   // Create game
