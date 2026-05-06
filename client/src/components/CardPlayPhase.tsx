@@ -16,6 +16,7 @@ interface CardPlayPhaseProps {
   onCardPlay: (bikeIds: number[], bindDeclare?: any) => Promise<void>;
   onPass: () => Promise<void>;
   onDraw: () => Promise<void>;
+  onLog?: (message: string, type: 'info' | 'success' | 'error' | 'warning') => void;
   isLoading?: boolean;
 }
 
@@ -57,6 +58,7 @@ export default function CardPlayPhase({
   onCardPlay,
   onPass,
   onDraw,
+  onLog,
   isLoading = false,
 }: CardPlayPhaseProps) {
   const { addToast } = useToast();
@@ -265,7 +267,11 @@ export default function CardPlayPhase({
                 if (validation.valid) {
                   setShowBindDialog(true);
                 } else {
-                  addToast('error', 'エラー', validation.reason || '無効なカードです');
+                  if (onLog) {
+                    onLog(validation.reason || '無効なカードです', 'error');
+                  } else {
+                    addToast('error', 'エラー', validation.reason || '無効なカードです');
+                  }
                 }
               }}
             >

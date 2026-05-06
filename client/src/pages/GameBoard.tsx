@@ -13,6 +13,8 @@ import BikeCard from "@/components/BikeCard";
 import HandReview from "@/components/HandReview";
 import ScoreBoard from "@/components/ScoreBoard";
 import RoundHistory from "@/components/RoundHistory";
+import GameLog, { LogEntry } from "@/components/GameLog";
+import { nanoid } from 'nanoid';
 
 interface GameBoardProps {
   playerCount?: number;
@@ -40,6 +42,24 @@ export default function GameBoard() {
   const [roundScores, setRoundScores] = useState<Record<number, number>>({});
   const [roundHistory, setRoundHistory] = useState<any[]>([]);
   const [totalRounds, setTotalRounds] = useState<number>(3);
+  
+  // Game Log States
+  const [gameLogs, setGameLogs] = useState<LogEntry[]>([]);
+  const [isLogOpen, setIsLogOpen] = useState(false);
+
+  // Centralized logging function
+  const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    const newLog: LogEntry = {
+      id: nanoid(),
+      message,
+      type,
+      time: new Date()
+    };
+    setGameLogs(prev => [...prev, newLog]);
+    
+    // Also show as toast for immediate feedback
+    addToast(type === 'warning' ? 'error' : type, message);
+  };
   
   const getStateQuery = trpc.game.getState.useQuery(
     { gameId: gameId! },
@@ -149,13 +169,13 @@ export default function GameBoard() {
         
         if (result.action === 'play') {
           const bikeName = result.bikeId ? `(ID:${result.bikeId})` : '';
-          addToast('info', `Player ${result.cpuPlayerId} がカードを出しました ${bikeName}`);
+          addLog(`Player ${result.cpuPlayerId} がカードを出しました ${bikeName}`, 'info');
         } else if (result.action === 'pass') {
-          addToast('info', `Player ${result.cpuPlayerId} がパスしました`);
+          addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
         }
         
         if ('trickCleared' in result && result.trickCleared) {
-          addToast('success', '他のプレイヤーが全員パスしました。場が流れます！好きなカードを出してください。');
+          addLog('他のプレイヤーが全員パスしました。場が流れます！好きなカードを出してください。', 'success');
         }
 
         if ('gameFinished' in result && result.gameFinished && 'winner' in result) {
@@ -199,7 +219,7 @@ export default function GameBoard() {
         setGamePhase('dealing');
       } catch (error) {
         console.error('Error rolling dice:', error);
-        addToast('error', 'サイコロを振るのに失敗しました', 'もう一度お試しください');
+        addLog('サイコロを振るのに失敗しました。もう一度お試しください', 'error');
       }
     }
   };
@@ -265,7 +285,7 @@ export default function GameBoard() {
     const dirLabel = chosen.direction === 'up' ? '大きい' : '小さい';
     const declPlayer = gameState?.game?.declarationPlayer || 2;
     
-    addToast('info', `Player ${declPlayer} が宣言：${specLabels[chosen.spec]}が${dirLabel}ほうが勝ち`);
+    addLog(`Player ${declPlayer} が宣言：${specLabels[chosen.spec]}が${dirLabel}ほうが勝ち`, 'info');
     
     await handleDeclaration(chosen.spec, chosen.direction);
   };
@@ -286,7 +306,7 @@ export default function GameBoard() {
         setGamePhase('playing');
       } catch (error) {
         console.error('Error declaring spec:', error);
-        addToast('error', 'スペック宣言に失敗しました', 'もう一度お試しください');
+        addLog('スペック宣言に失敗しました。もう一度お試しください', 'error');
       }
     }
   };
@@ -481,10 +501,10 @@ export default function GameBoard() {
               }
               // Refresh game state
               await getStateQuery.refetch();
-              addToast('success', 'カードを出しました');
+              addLog('カードを出しました', 'success');
             } catch (error) {
               console.error("Error playing card:", error);
-              addToast('error', 'カードを出すのに失敗しました', 'もう一度お試しください');
+              addLog('カードを出すのに失敗しました。もう一度お試しください', 'error');
             }
           }}
           onPass={async () => {
@@ -495,13 +515,13 @@ export default function GameBoard() {
               });
               // Refresh game state
               await getStateQuery.refetch();
-              addToast('info', 'パスしました');
+              addLog('パスしました', 'info');
               if ('trickCleared' in result && result.trickCleared) {
-                addToast('success', '全員がパスしました。場が流れます！');
+                addLog('全員がパスしました。場が流れます！', 'success');
               }
             } catch (error) {
               console.error("Error passing:", error);
-              addToast('error', 'パスに失敗しました', 'もう一度お試しください');
+              addLog('パスに失敗しました。もう一度お試しください', 'error');
             }
           }}
           onDraw={async () => {
@@ -512,13 +532,22 @@ export default function GameBoard() {
               });
               // Refresh game state
               await getStateQuery.refetch();
-              addToast('success', 'カードを引きました');
+              addLog('カードを引きました', 'success');
             } catch (error) {
               console.error("Error drawing card:", error);
-              addToast('error', 'カードを引くのに失敗しました', 'もう一度お試しください');
+              addLog('カードを引くのに失敗しました。もう一度お試しください', 'error');
             }
           }}
+          onLog={addLog}
           isLoading={playCardMutation.isPending || passMutation.isPending || drawCardMutation.isPending}
+        />
+
+        {/* Game Log Component */}
+        <GameLog 
+          logs={gameLogs} 
+          isOpen={isLogOpen} 
+          onClose={() => setIsLogOpen(false)} 
+          onToggle={() => setIsLogOpen(!isLogOpen)} 
         />
 
         {/* DeclarationPhase as an overlay */}
