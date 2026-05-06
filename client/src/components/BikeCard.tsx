@@ -81,51 +81,59 @@ export default function BikeCard({
         `}
       >
         <div className="w-full flex flex-col h-full text-center relative z-10">
+          {/* Top Bar (ID & Badges) */}
+          {size !== "small" && (
+            <div className="flex justify-between items-start w-full mb-1">
+              <div className="bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-br-lg border-b border-r border-white/10 -ml-3 -mt-3 sm:-ml-5 sm:-mt-5 z-20">
+                <p className="text-[10px] font-mono text-cyan-400">
+                  #{bike.id.toString().padStart(3, '0')}
+                </p>
+              </div>
+              <div className="flex gap-1 -mr-3 -mt-3 sm:-mr-5 sm:-mt-5 z-20">
+                <span className="px-1.5 py-0.5 bg-pink-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10">
+                  {bike.transmission}
+                </span>
+                <span className="px-1.5 py-0.5 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white border-b border-l border-white/10">
+                  {bike.cylinders}気筒
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Header Info */}
-          <div className={`${isPokerRatio ? "mb-2 sm:mb-4" : "mb-3"}`}>
-            <p className="text-[12px] font-bold text-cyan-400 uppercase tracking-widest mb-0.5">
+          <div className={`${isPokerRatio ? "mb-2" : "mb-3"} mt-1`}>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">
               {bike.maker}
             </p>
-            <h3 className={`font-black text-white leading-tight ${size === 'large' ? 'text-lg' : 'text-base'} line-clamp-2`}>
+            <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
               {bike.name}
             </h3>
-            <p className="text-[12px] text-slate-500 font-mono mt-0.5">
-              ID: {bike.id.toString().padStart(3, '0')}
-            </p>
           </div>
 
           {size !== "small" && (
             <>
-              {/* Badges */}
-              <div className="flex justify-center gap-2 mb-3">
-                <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20">
-                  {bike.transmission}
-                </span>
-                <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  {bike.cylinders}気筒
-                </span>
-              </div>
-
-              {/* Bike Image */}
-              <div className={`w-full ${isPokerRatio ? "aspect-[1.4/1]" : "aspect-[4/3]"} bg-slate-950/60 rounded-lg overflow-hidden mb-3 border border-white/10 shadow-inner`}>
+              {/* Bike Image - Expanded */}
+              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-[4/3]"} bg-slate-950/40 rounded-lg overflow-hidden mb-3 border border-white/10 shadow-inner group relative`}>
                 {bike.photoUrl ? (
                   <img 
                     src={bike.photoUrl} 
                     alt={bike.name} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-600">
-                    <span className="text-[10px]">NO IMAGE</span>
+                  <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50">
+                    <span className="text-[10px] font-bold tracking-tighter uppercase">No Image</span>
                   </div>
                 )}
+                {/* Visual Polish: Gradient overlay on image */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent pointer-events-none" />
               </div>
 
               {/* Quick Specs List */}
-              <div className={`space-y-1 mt-auto border-t border-white/10 ${isPokerRatio ? "pt-2 sm:pt-4" : "pt-3"}`}>
+              <div className={`space-y-0.5 sm:space-y-1 mt-auto border-t border-white/10 ${isPokerRatio ? "pt-2 sm:pt-3" : "pt-3"}`}>
                 {SPEC_ITEMS.map((spec) => {
                   const isActive = spec.key === activeSpec;
                   return (
