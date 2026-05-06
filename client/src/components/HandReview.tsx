@@ -45,35 +45,15 @@ export default function HandReview({ hand, playerNumber, onConfirm }: HandReview
       {/* Hand Display */}
       <div className="w-full max-w-2xl bg-slate-800/50 border border-cyan-500/30 rounded-lg p-6 mb-8">
         <p className="text-xs text-slate-400 mb-3">（← 横スクロールで確認できます →）</p>
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-4 snap-x snap-mandatory -mx-1 px-1 mb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-4 snap-x snap-mandatory -mx-1 px-1 mb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           {hand.map((bike) => (
-            <div
-              key={bike.id}
-              onClick={() => setSelectedBikeId(bike.id)}
-              className={`flex-shrink-0 w-[140px] sm:w-[160px] p-2.5 sm:p-3 rounded-lg border-2 cursor-pointer transition-all duration-300 snap-start ${
-                selectedBikeId === bike.id
-                  ? "border-cyan-400 bg-cyan-500/10 shadow-lg shadow-cyan-400/20 scale-[1.02]"
-                  : "border-slate-600 bg-slate-700/30 hover:border-cyan-500/50"
-              }`}
-            >
-              <div className="text-center">
-                <p className="text-xs sm:text-sm font-semibold text-white truncate">
-                  {bike.name}
-                </p>
-                <p className="text-[10px] sm:text-xs text-slate-400 truncate">{bike.maker}</p>
-                <div className="flex justify-center gap-1 mt-1 mb-1.5">
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">{bike.transmission}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">{bike.cylinders}気筒</span>
-                </div>
-                <div className="space-y-0.5 text-[10px] text-slate-300">
-                  {SPEC_ITEMS.map((spec) => (
-                    <p key={spec.key} className="flex justify-between">
-                      <span className="text-slate-400">{spec.label}</span>
-                      <span>{bike[spec.key] ?? "-"}{spec.unit}</span>
-                    </p>
-                  ))}
-                </div>
-              </div>
+            <div key={bike.id} className="snap-start flex-shrink-0">
+              <BikeCard
+                bike={bike}
+                isSelected={selectedBikeId === bike.id}
+                onClick={() => setSelectedBikeId(bike.id)}
+                size="medium"
+              />
             </div>
           ))}
         </div>

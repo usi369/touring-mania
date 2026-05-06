@@ -19,6 +19,8 @@ interface CardPlayPhaseProps {
   isLoading?: boolean;
 }
 
+import BikeCard from "./BikeCard";
+
 const SPEC_ITEMS = [
   { key: "horsepower", label: "馬力", unit: "PS" },
   { key: "fuelEfficiency", label: "燃費", unit: "km/L" },
@@ -189,53 +191,26 @@ export default function CardPlayPhase({
                 return (
                   <div
                     key={`${fc.id}-${bike.id}-${bikeIdx}`}
-                    className={`flex-shrink-0 transition-all duration-300 snap-center ${
-                      isLatestCard
-                        ? 'w-[150px] sm:w-[170px] p-3 rounded-xl border-2 border-cyan-400 bg-cyan-950/40 shadow-[0_0_15px_rgba(34,211,238,0.3)] scale-105 z-10 relative'
-                        : 'w-[130px] sm:w-[140px] p-2.5 rounded-lg border border-slate-700 bg-slate-800/30 opacity-60 scale-95 hover:opacity-100'
+                    className={`flex-shrink-0 transition-all duration-300 snap-center relative ${
+                      isLatestCard ? 'scale-105 z-10' : 'opacity-60 scale-95 hover:opacity-100'
                     }`}
                   >
                     {isLatestCard && (
-                      <div className="absolute -top-3 -left-2 bg-cyan-500 text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                      <div className="absolute -top-3 -left-2 bg-amber-500 text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg z-20">
                         現在の基準
                       </div>
                     )}
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="absolute top-2 right-2 z-20">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                        fc.playerId === 0 ? 'bg-amber-500/20 text-amber-300' : 
-                        fc.playerId === 1 ? 'bg-green-500/20 text-green-300' : 'bg-slate-600/50 text-slate-300'
+                        fc.playerId === 0 ? 'bg-amber-500/80 text-white' : 
+                        fc.playerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
                       }`}>{playerLabel}</span>
                     </div>
-                    <p className={`font-semibold text-white truncate ${isLatestCard ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>
-                      {bike.name}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-slate-400 truncate">{bike.maker}</p>
-                    <div className="flex justify-center gap-1 mt-1 mb-1.5">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                        {bike.transmission}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                        {bike.cylinders}気筒
-                      </span>
-                    </div>
-                    <div className="space-y-0.5">
-                      {SPEC_ITEMS.map((spec) => {
-                        const isActiveSpec = spec.key === declaredSpec;
-                        return (
-                          <div
-                            key={spec.key}
-                            className={`flex justify-between text-[10px] px-1 py-0.5 rounded ${
-                              isActiveSpec
-                                ? 'bg-amber-500/20 text-amber-300 font-semibold'
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            <span>{spec.label}</span>
-                            <span>{bike[spec.key] ?? '-'}{spec.unit}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <BikeCard 
+                      bike={bike} 
+                      size="medium" 
+                      activeSpec={declaredSpec}
+                    />
                   </div>
                 );
               });
@@ -258,52 +233,19 @@ export default function CardPlayPhase({
               const selectionIndex = selectedCards.indexOf(bike.id);
               const isSelected = selectionIndex !== -1;
               return (
-                <div
-                  key={bike.id}
-                  onClick={() => handleCardSelect(bike.id)}
-                  className={`relative flex-shrink-0 w-[140px] sm:w-[160px] p-2.5 sm:p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 snap-start ${
-                    isSelected
-                      ? "border-cyan-400 bg-cyan-500/10 shadow-lg shadow-cyan-400/20 scale-[1.02] -translate-y-2"
-                      : "border-slate-600 bg-slate-700/30 hover:border-cyan-500/50"
-                  }`}
-                >
+                <div key={bike.id} className="snap-start flex-shrink-0 relative">
                   {isSelected && (
-                    <div className="absolute -top-3 -right-3 w-6 h-6 bg-cyan-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md z-10">
+                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md z-20">
                       {selectionIndex + 1}
                     </div>
                   )}
-                  {/* 車種名 */}
-                  <p className="text-xs sm:text-sm font-semibold text-white truncate">{bike.name}</p>
-                  {/* メーカー */}
-                  <p className="text-[10px] sm:text-xs text-slate-400 truncate">{bike.maker}</p>
-                  {/* AT/MT・気筒数 */}
-                  <div className="flex justify-center gap-1 mt-1 mb-1.5">
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                      {bike.transmission}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      {bike.cylinders}気筒
-                    </span>
-                  </div>
-                  {/* スペック一覧 */}
-                  <div className="space-y-0.5">
-                    {SPEC_ITEMS.map((spec) => {
-                      const isActiveSpec = spec.key === declaredSpec;
-                      return (
-                        <div
-                          key={spec.key}
-                          className={`flex justify-between text-[10px] px-1 py-0.5 rounded ${
-                            isActiveSpec
-                              ? "bg-cyan-500/20 text-cyan-300 font-semibold"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          <span>{spec.label}</span>
-                          <span>{bike[spec.key] ?? "-"}{spec.unit}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <BikeCard
+                    bike={bike}
+                    isSelected={isSelected}
+                    onClick={() => handleCardSelect(bike.id)}
+                    size="medium"
+                    activeSpec={declaredSpec}
+                  />
                 </div>
               );
             })}

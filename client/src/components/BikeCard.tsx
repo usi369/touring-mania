@@ -16,6 +16,7 @@ interface BikeInfo {
   price: number;
   year: number;
   category: string;
+  photoUrl: string | null;
 }
 
 interface BikeCardProps {
@@ -24,6 +25,7 @@ interface BikeCardProps {
   onClick?: () => void;
   showDetails?: boolean;
   size?: "small" | "medium" | "large";
+  activeSpec?: string;
 }
 
 const SPEC_ITEMS = [
@@ -42,6 +44,7 @@ export default function BikeCard({
   onClick,
   showDetails = false,
   size = "medium",
+  activeSpec,
 }: BikeCardProps) {
   const [showModal, setShowModal] = useState(false);
 
@@ -77,13 +80,13 @@ export default function BikeCard({
         <div className="w-full flex flex-col h-full text-center">
           {/* Header Info */}
           <div className="mb-3">
-            <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-0.5">
+            <p className="text-[12px] font-bold text-cyan-400 uppercase tracking-widest mb-0.5">
               {bike.maker}
             </p>
-            <h3 className={`font-black text-white leading-tight ${size === 'large' ? 'text-base' : 'text-sm'} line-clamp-2`}>
+            <h3 className={`font-black text-white leading-tight ${size === 'large' ? 'text-lg' : 'text-base'} line-clamp-2`}>
               {bike.name}
             </h3>
-            <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+            <p className="text-[12px] text-slate-500 font-mono mt-0.5">
               ID: {bike.id.toString().padStart(3, '0')}
             </p>
           </div>
@@ -91,25 +94,49 @@ export default function BikeCard({
           {size !== "small" && (
             <>
               {/* Badges */}
-              <div className="flex justify-center gap-1 mb-3">
-                <span className="px-1.5 py-0.5 rounded-sm text-[8px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20">
+              <div className="flex justify-center gap-2 mb-3">
+                <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20">
                   {bike.transmission}
                 </span>
-                <span className="px-1.5 py-0.5 rounded-sm text-[8px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                   {bike.cylinders}気筒
                 </span>
               </div>
 
-              {/* Quick Specs List */}
-              <div className="space-y-1 mt-auto border-t border-white/10 pt-2">
-                {SPEC_ITEMS.map((spec) => (
-                  <div key={spec.key} className="flex justify-between items-center text-[11px]">
-                    <span className="text-slate-400 font-medium">{spec.label}</span>
-                    <span className="text-slate-100 font-bold leading-none">
-                      {(bike as any)[spec.key] ?? "-"}<span className="text-[8px] ml-0.5 text-slate-500 font-normal">{spec.unit}</span>
-                    </span>
+              {/* Bike Image */}
+              <div className="w-full aspect-[4/3] bg-slate-800/50 rounded-md overflow-hidden mb-3 border border-white/5">
+                {bike.photoUrl ? (
+                  <img 
+                    src={bike.photoUrl} 
+                    alt={bike.name} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <span className="text-[10px]">NO IMAGE</span>
                   </div>
-                ))}
+                )}
+              </div>
+
+              {/* Quick Specs List */}
+              <div className="space-y-1 mt-auto border-t border-white/10 pt-3">
+                {SPEC_ITEMS.map((spec) => {
+                  const isActive = spec.key === activeSpec;
+                  return (
+                    <div 
+                      key={spec.key} 
+                      className={`flex justify-between items-center text-[13px] px-1 py-0.5 rounded ${isActive ? 'bg-amber-500/20 text-amber-300 font-bold' : ''}`}
+                    >
+                      <span className={`${isActive ? 'text-amber-400/80' : 'text-slate-400'} font-medium`}>{spec.label}</span>
+                      <span className={`${isActive ? 'text-amber-200' : 'text-slate-100'} font-bold leading-none`}>
+                        {(bike as any)[spec.key] ?? "-"}<span className="text-[10px] ml-0.5 text-slate-500 font-normal">{spec.unit}</span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
