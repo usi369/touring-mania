@@ -1,137 +1,137 @@
-# Touring Mania - Project TODO
+# Touring Mania - プロジェクト TODO
 
-## Phase 1: Data & Infrastructure
-- [x] Extract 78 bike data from PDF design
-- [x] Create bikes_data.json with complete bike specifications
-- [x] Create database seeding script
-- [x] Execute seed-bikes.mjs to populate database with 78 bikes
+## フェーズ 1: データ & インフラ
+- [x] PDFデザインから78台のバイクデータを抽出
+- [x] 完全なバイクスペックを含む bikes_data.json を作成
+- [x] データベースのシーディングスクリプトを作成
+- [x] seed-bikes.mjs を実行し、データベースに78台のバイクを登録
 
-## Phase 2: Frontend - Basic Layout
-- [x] Create Home.tsx (title screen with game info)
-- [x] Create GameSetup.tsx (player count selection)
-- [x] Create GameBoard.tsx (main game screen layout)
-- [x] Update App.tsx with new routes (/game/setup, /game/play)
-- [x] Set dark theme as default for Touring Mania aesthetic
+## フェーズ 2: フロントエンド - 基本レイアウト
+- [x] Home.tsx (ゲーム情報を含むタイトル画面) の作成
+- [x] GameSetup.tsx (プレイヤー人数選択) の作成
+- [x] GameBoard.tsx (メインゲーム画面レイアウト) の作成
+- [x] App.tsx に新しいルート (/game/setup, /game/play) を追加
+- [x] Touring Mania の世界観に合わせてダークテーマをデフォルトに設定
 
-## Phase 3: Backend - Game Logic
-- [x] Create game router (server/routers/game.ts)
-- [x] Implement game.create mutation (initialize game with players)
-- [x] Implement game.getState query (fetch current game state)
-- [x] Implement game.playCards mutation (stub)
-- [x] Implement game.pass mutation (stub)
-- [x] Implement game.getBikes query (fetch bike details)
-- [x] Register gameRouter in server/routers.ts
+## フェーズ 3: バックエンド - ゲームロジック
+- [x] ゲームルーターの作成 (server/routers/game.ts)
+- [x] game.create ミューテーションの実装 (プレイヤーを含めたゲームの初期化)
+- [x] game.getState クエリの実装 (現在のゲーム状態の取得)
+- [x] game.playCards ミューテーションの実装 (スタブ)
+- [x] game.pass ミューテーションの実装 (スタブ)
+- [x] game.getBikes クエリの実装 (バイク詳細の取得)
+- [x] server/routers.ts に gameRouter を登録
 
-## Phase 4: Frontend-Backend Integration
-- [x] Update GameSetup to use trpc.game.create mutation
-- [x] Update GameBoard to use trpc.game.getState query
-- [x] Add loading states and error handling
-- [x] Display player hands and opponent info
+## フェーズ 4: フロントエンド・バックエンドの統合
+- [x] GameSetup で trpc.game.create ミューテーションを使用するように更新
+- [x] GameBoard で trpc.game.getState クエリを使用するように更新
+- [x] ローディング状態とエラーハンドリングの追加
+- [x] プレイヤーの手札と対戦相手情報の表示
 
-## Phase 5: Game Logic Implementation (COMPLETED)
-- [x] Implement dice roll phase (全員一斉にサイコロ振る演出)
-- [x] Implement card dealing phase (手札配る演出 - 1人4枚)
-- [x] Implement declaration phase (宣言者がスペック宣言)
-- [x] Implement card play phase (時計回りにカード出す/スキップ/山札から引く)
-- [x] Implement bind system logic (メーカー、気筒数、AT/MT縛り)
-- [x] Implement card comparison logic (宣言スペックで勝敗判定)
-- [x] Implement player elimination logic (手札がなくなったら勝ち)
-- [x] Implement drawCard complete logic
-- [x] Implement declaration -> playing transition
-- [x] Add game result screen
-- [x] Fix drawCard to query correct player by gameId + playerId
-- [x] Wire declaration success to set gamePhase='playing'
-- [x] Set gameResult when player wins
-- [x] Implement CPU AI for card selection
-- [x] Implement CPU AI for declaration
-- [x] Integrate CPU AI into game flow (cpuTurn router)
+## フェーズ 5: ゲームロジックの実装 (完了)
+- [x] サイコロフェーズの実装 (全員一斉にサイコロを振る演出)
+- [x] カード配布フェーズの実装 (手札配布演出 - 1人4枚)
+- [x] 宣言フェーズの実装 (宣言者がスペックを宣言)
+- [x] カードプレイフェーズの実装 (時計回りにカードを出す/パス/山札から引く)
+- [x] 縛りシステムの実装 (メーカー、気筒数、AT/MT縛り)
+- [x] カード比較ロジックの実装 (宣言スペックで勝敗判定)
+- [x] 脱落/勝利ロジックの実装 (手札がなくなったら勝ち)
+- [x] カードを引く (drawCard) ロジックの完成
+- [x] 宣言フェーズからプレイフェーズへの遷移実装
+- [x] ゲーム結果画面の追加
+- [x] gameId + playerId で正しいプレイヤーを照会するように drawCard を修正
+- [x] 宣言成功時に gamePhase を 'playing' に設定
+- [x] プレイヤー勝利時に gameResult を設定
+- [x] カード選択用の CPU AI の実装
+- [x] 宣言用の CPU AI の実装
+- [x] ゲームフローへの CPU AI の統合 (cpuTurn ルーター)
 
-## Phase 5.5: Testing (COMPLETED)
-- [x] Write vitest tests for game.create mutation
-- [x] Write vitest tests for game.getState query
-- [x] Write vitest tests for game.getBikes query
-- [x] All 9 tests passing
+## フェーズ 5.5: テスト (完了)
+- [x] game.create ミューテーションの vitest テスト作成
+- [x] game.getState クエリの vitest テスト作成
+- [x] game.getBikes クエリの vitest テスト作成
+- [x] 全9件のテストをパス
 
-## Phase 6: UI Enhancements (COMPLETED)
-- [x] Display player count selection
-- [x] Display game board layout
-- [x] Display opponent info
-- [x] Display player hand count
-- [x] Create bike card component (name, maker, specs display)
-- [x] Implement card dealing animation
-- [x] Implement card detail modal/popup
-- [x] Implement card selection UI for player
-- [x] Add game result screen
-- [x] Implement replay/restart functionality
-- [x] Add error handling/toasts for failed actions
+## フェーズ 6: UIの強化 (完了)
+- [x] プレイヤー人数選択の表示
+- [x] ゲームボードレイアウトの表示
+- [x] 対戦相手情報の表示
+- [x] プレイヤーの手札枚数の表示
+- [x] バイクカードコンポーネントの作成 (車名、メーカー、スペック表示)
+- [x] カード配布アニメーションの実装
+- [x] カード詳細モーダル/ポップアップの実装
+- [x] プレイヤー用のカード選択 UI の実装
+- [x] ゲーム結果画面の追加
+- [x] リプレイ/再開機能の実装
+- [x] 失敗時のエラーハンドリング/トースト通知の追加
 
-## Phase 7: Testing & Polish (COMPLETED)
-- [x] Write vitest tests for game logic
-- [x] Write vitest tests for tRPC procedures
-- [x] Write tests for drawCard procedure
-- [x] Write tests for game win/result flow
-- [x] Add CPU AI integration
-- [x] Add error handling/toasts for failed actions
-- [x] Test multiplayer game flow (CPU AI integrated)
-- [x] Performance optimization (30 tests passing, fast response)
-- [x] Cross-browser testing (dev server running)
-- [x] Mobile responsiveness verification (responsive design implemented)
+## フェーズ 7: テスト & ブラッシュアップ (完了)
+- [x] ゲームロジックの vitest テスト作成
+- [x] tRPC プロシージャの vitest テスト作成
+- [x] drawCard プロシージャのテスト作成
+- [x] ゲーム勝利/結果フローのテスト作成
+- [x] CPU AI の統合
+- [x] 失敗時のエラーハンドリング/トースト通知の追加
+- [x] マルチプレイヤーゲームフローのテスト (CPU AI 統合済み)
+- [x] パフォーマンス最適化 (30件のテストをパス、高速なレスポンス)
+- [x] クロスブラウザテスト (開発サーバーでの動作確認)
+- [x] モバイルレスポンシブの検証 (レスポンシブデザインの実装済み)
 
-## Phase 8: Final Deployment (COMPLETED)
-- [x] Create final checkpoint (version: 855ec26a)
-- [x] Project deployed to Manus platform
-- [x] Domain assigned: touring-mania-vite.pages.dev
-- [x] All features verified and working
+## フェーズ 8: 最終デプロイ (完了)
+- [x] 最終チェックポイントの作成 (バージョン: 855ec26a)
+- [x] Manus プラットフォームへのデプロイ
+- [x] ドメインの割り当て: touring-mania-vite.pages.dev
+- [x] 全機能の動作検証完了
 
-## Phase 9: Guest Mode Implementation (COMPLETED)
-- [x] Create guest session management utility
-- [x] Add guest context to tRPC
-- [x] Update game.create to support guest users
-- [x] Add guest session creation router
-- [x] Add "Play as Guest" button to Home.tsx (server-side session creation)
-- [x] Update GameSetup to handle guest mode (via publicProcedure)
-- [x] Add guest mode indicator to GameBoard (via context)
-- [x] Test guest game flow end-to-end (30 tests passing)
-- [x] Verify session cleanup (5-minute interval cleanup)
+## フェーズ 9: ゲストモードの実装 (完了)
+- [x] ゲストセッション管理ユーティリティの作成
+- [x] tRPC へのゲストコンテキストの追加
+- [x] game.create のゲストユーザー対応
+- [x] ゲストセッション作成ルーターの追加
+- [x] タイトル画面に「ゲストでプレイ」ボタンを追加 (サーバーサイドセッション作成)
+- [x] GameSetup のゲストモード対応 (publicProcedure 経由)
+- [x] GameBoard へのゲストモードインジケーターの追加 (コンテキスト経由)
+- [x] ゲストモードのゲームフローをエンドツーエンドでテスト (30件のテストをパス)
+- [x] セッションクリーンアップの検証 (5分間隔のクリーンアップ)
 
-## Phase 10: Hand Display & Confirmation (COMPLETED)
-- [x] Create HandReview component to display dealt cards
-- [x] Show bike details (name, maker, specs) for each card
-- [x] Add "確認完了" button to proceed to declaration
-- [x] Integrate HandReview into GameBoard after dealing phase
-- [x] Test hand display functionality (30 tests passing)
+## フェーズ 10: 手札確認 & 準備完了 (完了)
+- [x] 配布されたカードを表示する HandReview コンポーネントの作成
+- [x] 各カードのバイク詳細 (車名、メーカー、スペック) を表示
+- [x] 宣言に進むための「確認完了」ボタンを追加
+- [x] 配布フェーズ後の GameBoard に HandReview を統合
+- [x] 手札表示機能のテスト (30件のテストをパス)
 
-## Phase 11: Multiple Rounds Support (COMPLETED)
-- [x] Modify game schema to track multiple rounds (already exists)
-- [x] Implement round progression logic (GameResultScreen updated)
-- [x] Add round reset functionality (onNextRound handler)
-- [x] Update GameResultScreen to show Next Round button
-- [x] Implement round counter display (via isMultiRound prop)
+## フェーズ 11: 複数ラウンド対応 (完了)
+- [x] 複数ラウンドを追跡するためのゲームスキーマ修正 (既存)
+- [x] ラウンド進行ロジックの実装 (GameResultScreen の更新)
+- [x] ラウンドのリセット機能の実装 (onNextRound ハンドラー)
+- [x] GameResultScreen に「次のラウンドへ」ボタンを追加
+- [x] ラウンドカウンターの表示実装 (isMultiRound プロップ経由)
 
-## Phase 12: Game History & Scoreboard (COMPLETED)
-- [x] Create RoundHistory component
-- [x] Track cumulative scores across rounds (ScoreBoard component)
-- [x] Display round results (winner, scores)
-- [x] Add scoreboard to GameBoard (ready for integration)
-- [x] Implement score persistence during game session
+## フェーズ 12: ゲーム履歴 & スコアボード (完了)
+- [x] RoundHistory コンポーネントの作成
+- [x] ラウンドを跨いだ累積スコアの追跡 (ScoreBoard コンポーネント)
+- [x] ラウンド結果の表示 (勝者、スコア)
+- [x] GameBoard へのスコアボード追加 (統合準備完了)
+- [x] ゲームセッション中のスコア永続化の実装
 
-## Phase 13: Rules Explanation Screen (COMPLETED)
-- [x] Create RulesScreen component
-- [x] Add rules content (game flow, scoring, bind system)
-- [x] Add rules button to Home screen
-- [x] Implement modal/page navigation for rules
-- [x] Add tutorial/help system
+## フェーズ 13: ルール説明画面 (完了)
+- [x] RulesScreen コンポーネントの作成
+- [x] ルール内容の追加 (ゲームの流れ、スコアリング、縛りシステム)
+- [x] タイトル画面にルールボタンを追加
+- [x] ルールのモーダル/ページナビゲーションの実装
+- [x] チュートリアル/ヘルプシステムの追加
 
-## Phase 14: Integration & Testing (COMPLETED)
-- [x] Test multiple rounds flow end-to-end (31 tests passing)
-- [x] Test scoreboard accuracy
-- [x] Verify rules screen display (visible in Home screen)
-- [x] Test all features together
-- [x] Create final checkpoint
+## フェーズ 14: 統合 & テスト (完了)
+- [x] 複数ラウンドフローのエンドツーエンドテスト (31件のテストをパス)
+- [x] スコアボードの正確性のテスト
+- [x] ルール画面の表示確認 (タイトル画面から表示可能)
+- [x] 全機能の統合テスト
+- [x] 最終チェックポイントの作成
 
-## Phase 15: Game Experience Polish (IN PROGRESS)
-- [x] Show CPU hand details (Large/Medium/Small counts) in GameBoard
-- [ ] Requirements gathering for missing game features
-- [ ] UI/UX improvements and animations
-- [ ] Core gameplay adjustments
-
+## フェーズ 15: ゲーム体験のブラッシュアップ (進行中)
+- [x] GameBoard に CPU の手札詳細 (大/中/小の数) を表示
+- [x] バイクカードの文字サイズ拡大と画像表示の実装
+- [ ] 不足しているゲーム機能の要件定義
+- [ ] UI/UX の改善とアニメーションの追加
+- [ ] コアゲームプレイの調整
