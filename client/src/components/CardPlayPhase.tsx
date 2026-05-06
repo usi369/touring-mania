@@ -158,21 +158,6 @@ export default function CardPlayPhase({
 
   return (
     <div className="w-full h-full flex flex-col gap-3">
-      {/* Current Player Info */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
-        <p className="text-xs sm:text-sm text-slate-400">
-          {isYourTurn ? "あなたのターン" : `${currentPlayerName}のターン`}
-        </p>
-        <p className="text-base sm:text-lg font-bold text-cyan-400 mt-1">
-          {declaredSpec ? `${getSpecLabel(declaredSpec)} - ${declaredDirection === 'up' ? '高い順' : '低い順'}` : "スペック宣言中..."}
-        </p>
-        {declaredSpec && currentBind && bindValue && (
-          <p className="text-xs text-pink-400 mt-2">
-            縛り: {currentBind} = {bindValue}
-          </p>
-        )}
-      </div>
-
       {/* Field Cards - Cards on the table */}
       <div className="bg-slate-800/30 border-2 border-dashed border-amber-500/40 rounded-lg p-3 sm:p-4 mb-2">
         <p className="text-xs text-amber-400 mb-2">場の履歴（左が最新）</p>

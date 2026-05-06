@@ -26,6 +26,17 @@ interface GameBoardProps {
  */
 type GamePhase = 'dice' | 'dealing' | 'handReview' | 'declaration' | 'playing' | 'finished';
 
+const specLabels: Record<string, string> = {
+  horsepower: "馬力",
+  fuelEfficiency: "燃費",
+  seatHeight: "シート高",
+  totalLength: "全長",
+  weight: "重量",
+  price: "価格",
+  year: "発売年月日",
+  cylinders: "気筒数",
+};
+
 export default function GameBoard() {
   const [, setLocation] = useLocation();
   const { addToast, clearToasts } = useToast();
@@ -438,54 +449,73 @@ export default function GameBoard() {
           </button>
         </div>
 
-        {/* Opponent Cards Display Area */}
-        <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4 flex flex-col items-center justify-center mb-1">
-          <p className="text-slate-400 text-xs sm:text-sm mb-2 sm:mb-3">対戦相手の手札</p>
-          <div className={`grid gap-2 sm:gap-4 w-full ${
-            gameState.players.length === 2 ? 'grid-cols-1 max-w-[240px]' : 
-            gameState.players.length === 3 ? 'grid-cols-2' : 
-            'grid-cols-3'
-          }`}>
-            {gameState.players.slice(1).map((player: any) => {
-              const cpuBikes = player.hand.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
-              const largeCount = cpuBikes.filter((b: any) => b.category === 'large').length;
-              const mediumCount = cpuBikes.filter((b: any) => b.category === 'medium').length;
-              const smallCount = cpuBikes.filter((b: any) => b.category === 'small').length;
-              
-              return (
-                <div
-                  key={player.playerId}
-                  className="bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 rounded-lg flex flex-col items-center justify-center p-2 sm:p-3 w-full h-full shadow-sm"
-                >
-                  <p className="text-[10px] sm:text-xs text-slate-400 mb-0.5 font-bold">Player {player.playerId}</p>
-                  <div className="flex items-baseline gap-1 mb-1.5">
-                    <p className="text-lg sm:text-xl font-bold text-slate-200">{player.hand.length}</p>
-                    <p className="text-[9px] sm:text-[10px] text-slate-500 font-medium">枚</p>
-                  </div>
-                  
-                  {player.hand.length > 0 ? (
-                    <div className="flex gap-1 w-full justify-center">
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
-                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">大型</span>
-                        <span className={`text-[10px] sm:text-xs font-bold ${largeCount > 0 ? 'text-amber-400' : 'text-slate-600'}`}>{largeCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
-                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">中型</span>
-                        <span className={`text-[10px] sm:text-xs font-bold ${mediumCount > 0 ? 'text-cyan-400' : 'text-slate-600'}`}>{mediumCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-slate-900/50 rounded px-1.5 py-0.5 flex-1 max-w-[36px] sm:max-w-[42px] border border-slate-700/50">
-                        <span className="text-[8px] sm:text-[9px] text-slate-400 font-medium mb-0.5">小型</span>
-                        <span className={`text-[10px] sm:text-xs font-bold ${smallCount > 0 ? 'text-pink-400' : 'text-slate-600'}`}>{smallCount}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-[9px] sm:text-[10px] text-amber-500 font-bold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-                      上がり
-                    </div>
-                  )}
+        {/* Status Area (Declaration & Opponents) */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-1">
+          {/* Declaration & Turn Info - Top Left */}
+          <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex flex-col justify-center min-h-[120px]">
+            <p className="text-sm text-slate-400 font-bold mb-2">
+              {isYourTurn ? "あなたのターン" : `${playerName} のターン`}
+            </p>
+            <div className="flex flex-col">
+              <p className="text-2xl sm:text-3xl font-black text-cyan-400 leading-tight">
+                {gameState.game.declaredSpec ? 
+                  `${specLabels[gameState.game.declaredSpec]} - ${gameState.game.declaredDirection === 'up' ? '高い順' : '低い順'}` 
+                  : "スペック宣言中..."
+                }
+              </p>
+              {gameState.game.declaredSpec && gameState.game.currentBind && gameState.game.bindValue && (
+                <div className="mt-2 inline-flex items-center gap-2 bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full border border-pink-500/30 w-fit">
+                  <span className="text-xs font-black uppercase tracking-wider">縛り確定</span>
+                  <span className="text-sm font-bold">{specLabels[gameState.game.currentBind] || gameState.game.currentBind} = {gameState.game.bindValue}</span>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          </div>
+
+          {/* Opponent Cards Display Area - Top Right */}
+          <div className="flex-1 bg-slate-800/30 border border-slate-700 rounded-xl p-4 flex flex-col items-center justify-center min-h-[120px]">
+            <p className="text-slate-400 text-xs font-bold mb-3 uppercase tracking-tighter">対戦相手の手札</p>
+            <div className={`grid gap-2 w-full ${
+              gameState.players.length === 2 ? 'grid-cols-1 max-w-[180px]' : 
+              gameState.players.length === 3 ? 'grid-cols-2' : 
+              'grid-cols-3'
+            }`}>
+              {gameState.players.slice(1).map((player: any) => {
+                const cpuBikes = player.hand.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
+                const largeCount = cpuBikes.filter((b: any) => b.category === 'large').length;
+                const mediumCount = cpuBikes.filter((b: any) => b.category === 'medium').length;
+                const smallCount = cpuBikes.filter((b: any) => b.category === 'small').length;
+                
+                return (
+                  <div
+                    key={player.playerId}
+                    className="bg-slate-900/60 border border-slate-700/50 rounded-lg flex flex-col items-center justify-center py-2 px-1 shadow-inner"
+                  >
+                    <p className="text-[10px] text-slate-500 mb-1 font-bold">P{player.playerId}</p>
+                    <div className="flex items-baseline gap-0.5 mb-1.5">
+                      <p className="text-xl font-black text-slate-200">{player.hand.length}</p>
+                      <p className="text-[9px] text-slate-500">枚</p>
+                    </div>
+                    
+                    {player.hand.length > 0 ? (
+                      <div className="flex gap-0.5 w-full justify-center scale-90">
+                        <div className="flex flex-col items-center bg-slate-800/80 rounded px-1 flex-1 border border-white/5">
+                          <span className={`text-[10px] font-black ${largeCount > 0 ? 'text-amber-400' : 'text-slate-700'}`}>{largeCount}</span>
+                        </div>
+                        <div className="flex flex-col items-center bg-slate-800/80 rounded px-1 flex-1 border border-white/5">
+                          <span className={`text-[10px] font-black ${mediumCount > 0 ? 'text-cyan-400' : 'text-slate-700'}`}>{mediumCount}</span>
+                        </div>
+                        <div className="flex flex-col items-center bg-slate-800/80 rounded px-1 flex-1 border border-white/5">
+                          <span className={`text-[10px] font-black ${smallCount > 0 ? 'text-pink-400' : 'text-slate-700'}`}>{smallCount}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] text-amber-500 font-black">WIN</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
