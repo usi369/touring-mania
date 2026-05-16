@@ -461,7 +461,17 @@ export const gameRouter = router({
         const decision = decideCPUAction(handBikes as any, lastBikes, game.declaredSpec as any, game.declaredDirection as any, game.currentBind as any, game.bindValue as any);
         console.log(`[CPU] P${cpuPlayerId} decision: ${decision.action}`);
         const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-        const nextPlayer = getNextPlayer(cpuPlayerId, game.playerCount, turnOrder);
+        
+        const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
+        const getNextTurnPlayer = (currentPlayer: number, states: any[]) => {
+          let np = getNextPlayer(currentPlayer, game.playerCount, turnOrder);
+          let safety = 0;
+          while (states.find(s => s.playerId === np)?.passed === 1 && safety < game.playerCount) {
+            np = getNextPlayer(np, game.playerCount, turnOrder);
+            safety++;
+          }
+          return np;
+        };
 
         if (decision.action === 'play' && decision.bikeIds) {
           console.log(`[CPU] P${cpuPlayerId} plays: ${JSON.stringify(decision.bikeIds)}`);
@@ -473,11 +483,12 @@ export const gameRouter = router({
           if (updatedHand.length === 0) {
             await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
             await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
-            return { action: 'play', gameFinished: true, winner: cpuPlayerId };
+            return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId };
           }
+          const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
           await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
-          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds };
+          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId };
         } else if (decision.action === 'draw') {
            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
            const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
@@ -494,13 +505,45 @@ export const gameRouter = router({
              console.log(`[CPU] P${cpuPlayerId} hand AFTER draw: ${JSON.stringify(newHand)}`);
              await db.update(gameStates).set({ hand: JSON.stringify(newHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
            }
+           const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
            await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
            await checkGameIntegrity(db, input.gameId, 'CPU_DRAW_AFTER');
-           return { action: 'draw', nextPlayer };
+           return { action: 'draw', nextPlayer, cpuPlayerId };
         } else {
            console.log(`[CPU] P${cpuPlayerId} passes`);
            await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
-           return { action: 'pass', nextPlayer };
+           
+           const cpuStateIndex = allStates.findIndex(s => s.playerId === cpuPlayerId);
+           if (cpuStateIndex !== -1) allStates[cpuStateIndex].passed = 1;
+           const passedCount = allStates.filter(s => s.passed === 1).length;
+           
+           let nextPlayer;
+           let trickCleared = false;
+           
+           if (passedCount >= game.playerCount - 1) {
+             trickCleared = true;
+             const lastPlayedRecord = await db.select().from(playedCards)
+               .where(eq(playedCards.gameId, input.gameId))
+               .orderBy(desc(playedCards.id))
+               .limit(1);
+             nextPlayer = lastPlayedRecord.length > 0 ? lastPlayedRecord[0].playerId : cpuPlayerId;
+             
+             await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
+             await db.update(playedCards).set({ bikeIds: JSON.stringify([]) as any }).where(eq(playedCards.gameId, input.gameId));
+             await db.update(games).set({ 
+               prevDeclaredSpec: game.declaredSpec,
+               prevDeclaredDirection: game.declaredDirection,
+               declaredSpec: null,
+               declaredDirection: null,
+               declarationPlayer: nextPlayer,
+               currentTurn: nextPlayer 
+             }).where(eq(games.id, input.gameId));
+           } else {
+             nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
+             await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+           }
+           
+           return { action: 'pass', nextPlayer, trickCleared, cpuPlayerId };
         }
       } catch (error) {
         console.error("CPU Play error:", error);
