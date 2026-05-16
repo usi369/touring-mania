@@ -225,6 +225,23 @@ export const gameRouter = router({
           currentTurn: nextPlayer,
         }).where(eq(games.id, input.gameId));
 
+        // Draw initial field card from a random deck
+        const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+        const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+        if (nonEmptyDecks.length > 0) {
+          const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
+          const deckIds = JSON.parse(selectedDeck.bikeIds);
+          const drawnId = deckIds[0];
+          const remaining = deckIds.slice(1);
+          await db.update(decks).set({ bikeIds: JSON.stringify(remaining) }).where(eq(decks.id, selectedDeck.id));
+          
+          await db.insert(playedCards).values({
+            gameId: input.gameId,
+            playerId: 0, // 0 represents the deck/system
+            bikeIds: JSON.stringify([drawnId]),
+          });
+        }
+
         return { success: true, spec: input.spec, direction: input.direction, nextPlayer };
       } catch (error) {
         console.error("Error declaring spec:", error);
