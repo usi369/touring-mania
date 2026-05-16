@@ -210,6 +210,5 @@ export default function DeclarationPhase({
         </Card>
       </div>
     </div>
-  </div>
   );
 }
