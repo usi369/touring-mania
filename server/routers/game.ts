@@ -287,11 +287,20 @@ export const gameRouter = router({
         await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
         // Record played card
-        await db.insert(playedCards).values({
-          gameId: input.gameId,
-          playerId: input.playerId,
-          bikeIds: JSON.stringify(input.bikeIds),
-        });
+        const currentPlayed = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, input.playerId))).limit(1);
+        if (currentPlayed.length > 0) {
+          const currentIds = typeof currentPlayed[0].bikeIds === 'string' ? JSON.parse(currentPlayed[0].bikeIds) : currentPlayed[0].bikeIds || [];
+          await db.update(playedCards).set({ 
+            bikeIds: JSON.stringify([...currentIds, ...input.bikeIds]) as any,
+            playedAt: new Date()
+          }).where(eq(playedCards.id, currentPlayed[0].id));
+        } else {
+          await db.insert(playedCards).values({
+            gameId: input.gameId,
+            playerId: input.playerId,
+            bikeIds: JSON.stringify(input.bikeIds),
+          });
+        }
 
         // Handle bind
         if (input.bindDeclare) {
@@ -479,7 +488,18 @@ export const gameRouter = router({
           const updatedHand = handIds.filter((id: number) => !decision.bikeIds!.includes(id));
           console.log(`[CPU] P${cpuPlayerId} hand AFTER play: ${JSON.stringify(updatedHand)}`);
           await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
-          await db.insert(playedCards).values({ gameId: input.gameId, playerId: cpuPlayerId, bikeIds: JSON.stringify(decision.bikeIds) });
+          
+          const currentPlayed = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, cpuPlayerId))).limit(1);
+          if (currentPlayed.length > 0) {
+            const currentIds = typeof currentPlayed[0].bikeIds === 'string' ? JSON.parse(currentPlayed[0].bikeIds) : currentPlayed[0].bikeIds || [];
+            await db.update(playedCards).set({ 
+              bikeIds: JSON.stringify([...currentIds, ...decision.bikeIds]) as any,
+              playedAt: new Date()
+            }).where(eq(playedCards.id, currentPlayed[0].id));
+          } else {
+            await db.insert(playedCards).values({ gameId: input.gameId, playerId: cpuPlayerId, bikeIds: JSON.stringify(decision.bikeIds) });
+          }
+          
           if (decision.bindDeclare) await db.update(games).set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value }).where(eq(games.id, input.gameId));
           if (updatedHand.length === 0) {
             await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));

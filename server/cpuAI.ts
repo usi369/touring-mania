@@ -57,11 +57,11 @@ export function decideCPUAction(
     
     validCards = hand.filter(bike => {
       if (currentBind === 'maker') {
-        return bike.maker === bindValue || lastBike.maker === bike.maker;
+        return bike.maker === bindValue;
       } else if (currentBind === 'cylinders') {
-        return bike.cylinders === (bindValue as any) || lastBike.cylinders === bike.cylinders;
+        return String(bike.cylinders) === bindValue;
       } else if (currentBind === 'transmission') {
-        return bike.transmission === bindValue || lastBike.transmission === bike.transmission;
+        return bike.transmission === bindValue;
       }
       return true;
     });

@@ -507,7 +507,9 @@ export default function GameBoard() {
       </AnimatePresence>
 
       {/* Game Log Overlay/Dialog */}
-      <GameLog logs={gameLogs} isOpen={isLogOpen} unreadCount={unreadCount} onClose={() => setIsLogOpen(false)} onToggle={toggleLog} />
+      {['declaration', 'playing', 'finished'].includes(gamePhase) && (
+        <GameLog logs={gameLogs} isOpen={isLogOpen} unreadCount={unreadCount} onClose={() => setIsLogOpen(false)} onToggle={toggleLog} />
+      )}
 
       {/* Bike Details Modal */}
       {bikeDetails && (
