@@ -163,7 +163,7 @@ export default function CardPlayPhase({
         <p className="text-xs text-amber-400 mb-2">場の履歴（左が最新）</p>
         
         {fieldCards.length > 0 ? (
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-4 pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-6 pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
             {fieldCards.map((fc: any, recordIdx: number) => {
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
@@ -183,7 +183,7 @@ export default function CardPlayPhase({
                     }`}
                   >
                     {isLatestCard && (
-                      <div className="absolute -top-3 -left-2 bg-amber-500 text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg z-20">
+                      <div className="absolute -top-4 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
                         現在の基準
                       </div>
                     )}
@@ -298,7 +298,19 @@ export default function CardPlayPhase({
                     key={type}
                     variant={selectedBindType === type ? 'default' : 'outline'}
                     className={`text-xs sm:text-sm ${selectedBindType === type ? 'bg-cyan-600' : ''}`}
-                    onClick={() => setSelectedBindType(type)}
+                    onClick={() => {
+                      setSelectedBindType(type);
+                      if (selectedCards.length > 0) {
+                        const firstBike = playerHand.find(b => b.id === selectedCards[0]);
+                        if (firstBike) {
+                          let value = "";
+                          if (type === 'maker') value = firstBike.maker;
+                          else if (type === 'cylinders') value = String(firstBike.cylinders);
+                          else if (type === 'transmission') value = firstBike.transmission;
+                          setSelectedBindValue(value);
+                        }
+                      }
+                    }}
                   >
                     {type === 'maker' ? 'メーカー' : type === 'cylinders' ? '気筒数' : 'AT/MT'}
                   </Button>

@@ -69,36 +69,27 @@ export default function DeclarationPhase({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto py-4">
-      <div className="w-full max-w-lg mx-4 flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
-        {/* Hand Display (collapsible) */}
+    <div className="fixed inset-0 bg-slate-950/20 flex flex-col items-center justify-center z-50 overflow-y-auto py-8">
+      <div className="w-full max-w-4xl mx-4 flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
+        {/* Hand Display (Always visible in a row) */}
         {hand.length > 0 && (
-          <Card className="bg-slate-900/95 border-slate-600 p-4">
-            <button
-              onClick={() => setShowHand(!showHand)}
-              className="w-full flex items-center justify-between text-sm text-slate-300 mb-2 hover:text-white transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                {showHand ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                あなたの手札（{hand.length}枚）
-              </span>
-              {showHand ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-
-            {showHand && (
-              <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-4 mt-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-                {hand.map((bike: any) => (
-                  <div key={bike.id} className="flex-shrink-0 snap-center transition-transform hover:scale-[1.02]">
+          <div className="w-full">
+            <p className="text-xs font-black text-white/60 uppercase tracking-[0.2em] mb-3 ml-2">あなたの手札（{hand.length}枚）</p>
+            <div className="flex gap-4 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory -mx-2 px-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {hand.map((bike: any) => (
+                <div key={bike.id} className="flex-shrink-0 snap-center transition-transform hover:scale-110 duration-300">
+                  <div className="shadow-[0_0_20px_rgba(0,0,0,0.5)] rounded-2xl">
                     <BikeCard bike={bike} size="medium" showDetails={true} />
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Declaration Card */}
-        <Card className="bg-slate-900 border-cyan-500/50 w-full p-6">
+        <div className="w-full flex justify-center">
+          <Card className="bg-slate-900/90 border-cyan-500/50 w-full max-w-lg p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-md">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">宣言フェーズ</h2>
             <p className="text-sm text-cyan-400">{playerName}の宣言</p>
@@ -210,5 +201,6 @@ export default function DeclarationPhase({
         </Card>
       </div>
     </div>
+  </div>
   );
 }

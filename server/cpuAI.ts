@@ -28,8 +28,8 @@ export function canWinWithBike(
   
   // Get spec values
   const specKey = declaredSpec as keyof Bike;
-  const bikeValue = bike[specKey] as number;
-  const lastValue = lastBike[specKey] as number;
+  const bikeValue = specKey === 'cylinders' ? parseInt(bike[specKey] as string, 10) || 1 : (bike[specKey] as number) || 0;
+  const lastValue = specKey === 'cylinders' ? parseInt(lastBike[specKey] as string, 10) || 1 : (lastBike[specKey] as number) || 0;
 
   if (declaredDirection === 'up') {
     return bikeValue >= lastValue;
@@ -152,7 +152,11 @@ export function decideCPUDeclaration(hand: Bike[]): {
   for (const spec of specs) {
     for (const direction of directions) {
       const specKey = spec as keyof Bike;
-      const values = hand.map(bike => bike[specKey] as number).sort((a, b) => a - b);
+      const values = hand.map(bike => {
+        const val = bike[specKey];
+        if (specKey === 'cylinders') return parseInt(val as string, 10) || 1;
+        return (val as number) || 0;
+      }).sort((a, b) => a - b);
       
       let score = 0;
       if (direction === 'up') {

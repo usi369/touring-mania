@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { games, gameStates, bikes, playedCards } from "../../drizzle/schema";
+import { games, gameStates, bikes, playedCards, decks } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { decideCPUAction, decideCPUDeclaration } from "../cpuAI";
 import { getNextPlayer, canPlayCard } from "../gameLogic";
@@ -143,25 +143,31 @@ export const cpuTurnRouter = router({
           const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
           nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
         } else if (decision.action === 'draw') {
-          // Draw card
-          const allPlayerStates = await db
+          // Draw card from decks
+          const gameDecks = await db
             .select()
-            .from(gameStates)
-            .where(eq(gameStates.gameId, input.gameId));
-
-          const dealtBikes = new Set<number>();
-          allPlayerStates.forEach((state: any) => {
-            const stateHand = typeof state.hand === 'string'
-              ? JSON.parse(state.hand)
-              : state.hand || [];
-            stateHand.forEach((bikeId: number) => dealtBikes.add(bikeId));
+            .from(decks)
+            .where(eq(decks.gameId, input.gameId));
+          
+          const nonEmptyDecks = gameDecks.filter((d: any) => {
+            const ids = JSON.parse(d.bikeIds);
+            return ids.length > 0;
           });
 
-          const availableBikes = allBikes.filter((b: any) => !dealtBikes.has(b.id));
+          if (nonEmptyDecks.length > 0) {
+            const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
+            const deckIds = JSON.parse(selectedDeck.bikeIds);
+            const drawnId = deckIds[0];
+            const remainingDeckIds = deckIds.slice(1);
 
-          if (availableBikes.length > 0) {
-            const randomBike = availableBikes[Math.floor(Math.random() * availableBikes.length)];
-            const updatedHand = [...hand, randomBike.id];
+            // Update deck in DB
+            await db
+              .update(decks)
+              .set({ bikeIds: JSON.stringify(remainingDeckIds) })
+              .where(eq(decks.id, selectedDeck.id));
+
+            const updatedHand = [...hand, drawnId];
+            console.log(`[CPU_DRAW] Player ${input.playerId} drew ID: ${drawnId} from ${selectedDeck.category} deck. New hand: ${JSON.stringify(updatedHand)}`);
 
             await db
               .update(gameStates)

@@ -44,6 +44,10 @@ export const bikes = sqliteTable("bikes", {
   year: integer("year").notNull(),
   price: integer("price").notNull(), // 万円
   photoUrl: text("photoUrl", { length: 500 }), // R2上のバイク画像URL
+  isTokyoRemake: integer("isTokyoRemake", { mode: "boolean" }).default(false).notNull(),
+  isR6Complete: integer("isR6Complete", { mode: "boolean" }).default(false).notNull(),
+  isR7Mega: integer("isR7Mega", { mode: "boolean" }).default(false).notNull(),
+  isR7Starter: integer("isR7Starter", { mode: "boolean" }).default(false).notNull(),
   createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
 });
 
@@ -57,6 +61,7 @@ export const games = sqliteTable("games", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("userId").notNull(), // Game creator (Player 1)
   playerCount: integer("playerCount").notNull(), // 2-4 players
+  edition: text("edition", { length: 50 }).default("r7_starter").notNull(), // Game Edition selected
   status: text("status", { enum: ["playing", "finished"] }).default("playing").notNull(),
   currentRound: integer("currentRound").default(1).notNull(),
   currentTurn: integer("currentTurn").default(1).notNull(), // Current player turn (1-4)

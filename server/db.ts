@@ -158,38 +158,74 @@ export function getComparisonValue(bike: typeof bikes.$inferSelect, condition: C
 /**
  * Initialize game
  */
-export async function initializeGame(userId: number, playerCount: number) {
+export async function initializeGame(userId: number, playerCount: number, edition: string = 'r7_starter') {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Get all bikes and pick exactly 32 for the round (R7 requirement)
-  const allBikes = await db.select().from(bikes);
-  
-  // Pick 32 random bikes if there are more, or use all if 32 or fewer
-  const selectedBikes = [...allBikes]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 32);
-  
-  const bikeIds = selectedBikes.map(b => b.id);
+  // Get bikes for the selected edition
+  let editionCondition = eq(bikes.isR7Starter, true);
+  if (edition === 'tokyo_remake') editionCondition = eq(bikes.isTokyoRemake, true);
+  else if (edition === 'r6_complete') editionCondition = eq(bikes.isR6Complete, true);
+  else if (edition === 'r7_mega') editionCondition = eq(bikes.isR7Mega, true);
 
-  // Shuffle selected bikes
-  const shuffled = [...bikeIds].sort(() => Math.random() - 0.5);
+  const selectedBikesRaw = await db.select().from(bikes).where(editionCondition);
+  console.log(`[INIT] Edition: ${edition}, Fetched bikes from DB: ${selectedBikesRaw.length}`);
+  
+  if (selectedBikesRaw.length === 0) {
+    throw new Error(`No cards found for the selected edition: ${edition}`);
+  }
+
+  // 1. Strict deduplication using Set and Map
+  const uniqueIdSet = new Set(selectedBikesRaw.map(b => b.id));
+  const bikeMap = new Map();
+  selectedBikesRaw.forEach(bike => {
+    if (!bikeMap.has(bike.id)) {
+      bikeMap.set(bike.id, bike);
+    }
+  });
+  
+  const selectedBikes = Array.from(bikeMap.values());
+  let bikeIds = Array.from(uniqueIdSet);
+  
+  console.log(`[INIT] Deduplication result: Raw=${selectedBikesRaw.length}, UniqueSet=${uniqueIdSet.size}, BikeMap=${bikeMap.size}`);
+
+  if (bikeIds.length !== uniqueIdSet.size) {
+    console.error(`[CRITICAL] ID mismatch detected! Set size ${uniqueIdSet.size} vs Array size ${bikeIds.length}`);
+    bikeIds = Array.from(uniqueIdSet);
+  }
+
+  // 2. Shuffle selected bikes (using a more robust shuffle)
+  const shuffled = [...bikeIds];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // 3. Final Integrity Check before distribution
+  const finalUniqueCheck = new Set(shuffled);
+  if (finalUniqueCheck.size !== shuffled.length) {
+    console.error(`[CRITICAL] Duplicates appeared in shuffled list! Shuffled=${shuffled.length}, Unique=${finalUniqueCheck.size}`);
+    throw new Error("Critical duplication error during game initialization");
+  }
 
   // Create game
   const gameResult = await db.insert(games).values({
     userId,
     playerCount,
+    edition,
     status: "playing",
     currentRound: 1,
   }).returning({ id: games.id });
 
   const gameId = gameResult[0].id;
+  console.log(`[INIT] Game created: ID ${gameId}`);
 
   // Distribute initial hand (4 cards per player)
   const handSize = 4;
   for (let i = 1; i <= playerCount; i++) {
     const startIdx = (i - 1) * handSize;
     const hand = shuffled.slice(startIdx, startIdx + handSize);
+    console.log(`[INIT] Player ${i} initial hand: ${JSON.stringify(hand)}`);
     
     await db.insert(gameStates).values({
       gameId,
@@ -205,19 +241,21 @@ export async function initializeGame(userId: number, playerCount: number) {
 
   // Categorize remaining cards
   const smallCards = remaining.filter(id => {
-    const bike = allBikes.find(b => b.id === id);
+    const bike = selectedBikes.find(b => b.id === id);
     return bike?.category === "small";
   });
 
   const mediumCards = remaining.filter(id => {
-    const bike = allBikes.find(b => b.id === id);
+    const bike = selectedBikes.find(b => b.id === id);
     return bike?.category === "medium";
   });
 
   const largeCards = remaining.filter(id => {
-    const bike = allBikes.find(b => b.id === id);
+    const bike = selectedBikes.find(b => b.id === id);
     return bike?.category === "large";
   });
+
+  console.log(`[INIT] Decks created - Small: ${smallCards.length}, Medium: ${mediumCards.length}, Large: ${largeCards.length}`);
 
   await db.insert(decks).values([
     { gameId, category: "small", bikeIds: JSON.stringify(smallCards) },
@@ -853,6 +891,10 @@ export async function seedBikesInternal() {
           year: bike.year,
           price: bike.price,
           photoUrl: bike.photoUrl || null,
+          isTokyoRemake: !!bike.isTokyoRemake,
+          isR6Complete: !!bike.isR6Complete,
+          isR7Mega: !!bike.isR7Mega,
+          isR7Starter: !!bike.isR7Starter,
         }).execute();
       }
     });

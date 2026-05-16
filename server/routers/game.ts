@@ -1,29 +1,84 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { games, gameStates, bikes } from "../../drizzle/schema";
-import { eq, inArray, and, desc } from "drizzle-orm";
+import { games, gameStates, bikes, decks, playedCards } from "../../drizzle/schema";
+import { eq, inArray, and, desc, sql } from "drizzle-orm";
 import { rollDice, determineTurnOrder, canPlayCard, getNextPlayer } from "../gameLogic";
-import { playedCards } from "../../drizzle/schema";
 import { decideCPUAction, decideCPUDeclaration } from "../cpuAI";
+
+/** ゲーム整合性チェック: 全手札・デッキ・場札間でカードIDの重複がないか検証 */
+async function checkGameIntegrity(db: any, gameId: number, caller: string) {
+  try {
+    const states = await db.select().from(gameStates).where(eq(gameStates.gameId, gameId));
+    const gameDecks = await db.select().from(decks).where(eq(decks.gameId, gameId));
+    const field = await db.select().from(playedCards).where(eq(playedCards.gameId, gameId));
+
+    const allIds: { source: string; id: number }[] = [];
+
+    states.forEach((s: any) => {
+      const hand: number[] = typeof s.hand === 'string' ? JSON.parse(s.hand) : s.hand || [];
+      // 手札内重複チェック
+      const handSet = new Set(hand);
+      if (handSet.size !== hand.length) {
+        console.error(`[INTEGRITY:${caller}] ★★★ P${s.playerId} 手札内重複! hand=${JSON.stringify(hand)}`);
+      }
+      hand.forEach((id: number) => allIds.push({ source: `P${s.playerId}_hand`, id }));
+    });
+
+    gameDecks.forEach((d: any) => {
+      const ids: number[] = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
+      ids.forEach((id: number) => allIds.push({ source: `deck_${d.category}`, id }));
+    });
+
+    field.forEach((f: any) => {
+      const ids: number[] = typeof f.bikeIds === 'string' ? JSON.parse(f.bikeIds) : f.bikeIds || [];
+      ids.forEach((id: number) => allIds.push({ source: `field_P${f.playerId}`, id }));
+    });
+
+    // 全体の重複検出
+    const idMap = new Map<number, string[]>();
+    allIds.forEach(({ source, id }) => {
+      if (!idMap.has(id)) idMap.set(id, []);
+      idMap.get(id)!.push(source);
+    });
+
+    const duplicates = [...idMap.entries()].filter(([, sources]) => sources.length > 1);
+    if (duplicates.length > 0) {
+      console.error(`[INTEGRITY:${caller}] ★★★ DUPLICATE DETECTED! gameId=${gameId}`);
+      duplicates.forEach(([id, sources]) => {
+        console.error(`  ID ${id} -> ${sources.join(', ')}`);
+      });
+    } else {
+      console.log(`[INTEGRITY:${caller}] OK gameId=${gameId} total=${allIds.length}cards`);
+    }
+    return duplicates;
+  } catch (e) {
+    console.error(`[INTEGRITY:${caller}] Check failed:`, e);
+    return [];
+  }
+}
 
 export const gameRouter = router({
   /**
-   * Create a new game (supports both authenticated and guest users)
+   * Create a new game
    */
   create: publicProcedure
-    .input(z.object({ playerCount: z.number().min(2).max(4) }))
+    .input(z.object({ 
+      playerCount: z.number().min(2).max(4),
+      edition: z.enum(["r7_starter", "tokyo_remake", "r6_complete", "r7_mega"]).default("r7_starter")
+    }))
     .mutation(async ({ input, ctx }) => {
       try {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Use authenticated user ID or a placeholder for guests
-        const userId = ctx.user?.id || 0; // 0 for guest users
+        const userId = ctx.user?.id || 0;
 
-        // Create game using initializeGame
         const { initializeGame } = await import('../db');
-        const gameId = await initializeGame(userId, input.playerCount);
+        const gameId = await initializeGame(userId, input.playerCount, input.edition);
+
+        console.log(`[CREATE] Game ${gameId} created. Running integrity check...`);
+        await checkGameIntegrity(db, gameId, 'CREATE');
 
         return { gameId };
       } catch (error) {
@@ -33,118 +88,7 @@ export const gameRouter = router({
     }),
 
   /**
-   * Get game state (supports both authenticated and guest users)
-   */
-   getState: publicProcedure
-    .input(z.object({ gameId: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
-
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
-
-        const game = gameRecord[0];
-
-        // Get all player states
-        const playerStates = await db
-          .select()
-          .from(gameStates)
-          .where(eq(gameStates.gameId, input.gameId));
-
-        // Format players array
-        const players = playerStates.map((state) => ({
-          playerId: state.playerId,
-          hand: typeof state.hand === 'string' ? JSON.parse(state.hand) : state.hand || [],
-        }));
-
-        // Collect all bike IDs from all player hands
-        const allBikeIds = new Set<number>();
-        players.forEach((p) => {
-          (p.hand as number[]).forEach((id) => allBikeIds.add(id));
-        });
-
-        // Get played cards (field cards)
-        const fieldCards = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id));
-
-        // Add played card bike IDs to the set
-        fieldCards.forEach((pc) => {
-          const ids: number[] = JSON.parse(pc.bikeIds);
-          ids.forEach((id) => allBikeIds.add(id));
-        });
-
-        // Fetch bike details
-        let bikeRecords: any[] = [];
-        if (allBikeIds.size > 0) {
-          bikeRecords = await db
-            .select()
-            .from(bikes)
-            .where(inArray(bikes.id, [...allBikeIds]));
-        }
-
-        // Format field cards with bike details
-        const bikesMap = new Map(bikeRecords.map((b: any) => [b.id, b]));
-        const formattedFieldCards = fieldCards.map((pc) => {
-          const ids: number[] = JSON.parse(pc.bikeIds);
-          return {
-            playerId: pc.playerId,
-            bikeIds: ids,
-            bikes: ids.map((id) => bikesMap.get(id)).filter(Boolean),
-          };
-        });
-
-        return {
-          game,
-          players,
-          bikes: bikeRecords,
-          fieldCards: formattedFieldCards,
-        };
-      } catch (error) {
-        console.error("Error getting game state:", error);
-        throw error;
-      }
-    }),
-
-  /**
-   * Get bikes by IDs (supports both authenticated and guest users)
-   */
-  getBikes: publicProcedure
-    .input(z.object({ bikeIds: z.array(z.number()) }))
-    .query(async ({ input }) => {
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-
-        if (input.bikeIds.length === 0) {
-          return [];
-        }
-
-        const bikeRecords = await db
-          .select()
-          .from(bikes)
-          .where(inArray(bikes.id, input.bikeIds));
-
-        return bikeRecords;
-      } catch (error) {
-        console.error("Error getting bikes:", error);
-        throw error;
-      }
-    }),
-
-  /**
-   * Roll dice to determine turn order
+   * Roll dice and set declaration player / turn order
    */
   rollDice: publicProcedure
     .input(z.object({
@@ -157,21 +101,77 @@ export const gameRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Update game with turn order and declaration player from client
-        await db
-          .update(games)
-          .set({
-            declarationPlayer: input.declarationPlayer,
-            currentTurn: input.declarationPlayer,
-          })
-          .where(eq(games.id, input.gameId));
+        console.log(`[DICE] gameId=${input.gameId} declarationPlayer=${input.declarationPlayer} turnOrder=${JSON.stringify(input.turnOrder)}`);
 
-        return {
+        await db.update(games).set({
           declarationPlayer: input.declarationPlayer,
-          turnOrder: input.turnOrder,
-        };
+          currentTurn: input.declarationPlayer,
+        }).where(eq(games.id, input.gameId));
+
+        return { success: true };
       } catch (error) {
         console.error("Error rolling dice:", error);
+        throw error;
+      }
+    }),
+
+  /**
+   * Get game state
+   */
+  getState: publicProcedure
+    .input(z.object({ gameId: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // 毎回の状態取得時に整合性チェック
+        await checkGameIntegrity(db, input.gameId, 'getState');
+
+        const gameRecord = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
+        if (!gameRecord.length) throw new Error("Game not found");
+        const game = gameRecord[0];
+
+        const playerStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
+        const players = playerStates.map((state) => ({
+          playerId: state.playerId,
+          hand: typeof state.hand === 'string' ? JSON.parse(state.hand) : state.hand || [],
+          passed: state.passed,
+          rank: state.rank,
+        }));
+
+        const allBikeIds = new Set<number>();
+        players.forEach((p) => (p.hand as number[]).forEach((id) => allBikeIds.add(id)));
+
+        const fieldCards = await db
+          .select()
+          .from(playedCards)
+          .where(eq(playedCards.gameId, input.gameId))
+          .orderBy(desc(playedCards.playedAt), desc(playedCards.id));
+
+        fieldCards.forEach((pc) => {
+          const ids: number[] = JSON.parse(pc.bikeIds);
+          ids.forEach((id) => allBikeIds.add(id));
+        });
+
+        let bikeRecords: any[] = [];
+        if (allBikeIds.size > 0) {
+          bikeRecords = await db.select().from(bikes).where(inArray(bikes.id, [...allBikeIds]));
+        }
+
+        const bikesMap = new Map(bikeRecords.map((b: any) => [b.id, b]));
+        const formattedFieldCards = fieldCards.map((pc) => {
+          const ids: number[] = JSON.parse(pc.bikeIds);
+          return {
+            playerId: pc.playerId,
+            bikeIds: ids,
+            bikes: ids.map((id) => bikesMap.get(id)).filter(Boolean),
+          };
+        });
+
+        return { game, players, bikes: bikeRecords, fieldCards: formattedFieldCards };
+      } catch (error) {
+        console.error("Error getting game state:", error);
         throw error;
       }
     }),
@@ -180,127 +180,34 @@ export const gameRouter = router({
    * Declare a spec for the round
    */
   declareSpec: publicProcedure
-    .input(
-      z.object({
-        gameId: z.number(),
-        spec: z.enum(['horsepower', 'fuelEfficiency', 'seatHeight', 'totalLength', 'weight', 'price', 'year']),
-        direction: z.enum(['up', 'down']).default('up'),
-      })
-    )
+    .input(z.object({
+      gameId: z.number(),
+      spec: z.enum(['horsepower', 'fuelEfficiency', 'seatHeight', 'totalLength', 'weight', 'price', 'year']),
+      direction: z.enum(['up', 'down']).default('up'),
+    }))
     .mutation(async ({ input }) => {
       try {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Get game to get declaration player
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
-
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
-
+        const gameRecord = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
+        if (!gameRecord.length) throw new Error("Game not found");
         const game = gameRecord[0];
-        const declarationPlayer = game.declarationPlayer || 1;
-        const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-        const nextPlayer = getNextPlayer(declarationPlayer, game.playerCount, turnOrder);
 
-        const allBikes = await db.select().from(bikes);
-        const allPlayerStates = await db
-          .select()
-          .from(gameStates)
-          .where(eq(gameStates.gameId, input.gameId));
-
-        // Collect all bike IDs already in player hands
-        const dealtBikes = new Set<number>();
-        allPlayerStates.forEach((state: any) => {
-          const stateHand = typeof state.hand === 'string'
-            ? JSON.parse(state.hand)
-            : state.hand || [];
-          stateHand.forEach((bikeId: number) => dealtBikes.add(bikeId));
-        });
-
-        // Also exclude already played cards
-        const alreadyPlayed = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId));
-        alreadyPlayed.forEach((pc: any) => {
-          const ids: number[] = JSON.parse(pc.bikeIds);
-          ids.forEach((id) => dealtBikes.add(id));
-        });
-
-        // Validate: cannot repeat the same spec+direction as previous declaration
         if (game.prevDeclaredSpec === input.spec && game.prevDeclaredDirection === input.direction) {
           throw new Error(`前回と同じ宣言（${input.spec} ${input.direction}）はできません`);
         }
 
-        // Store declaration
-        await db
-          .update(games)
-          .set({
-            declaredSpec: input.spec,
-            declaredDirection: input.direction,
-            currentTurn: nextPlayer,
-          })
-          .where(eq(games.id, input.gameId));
+        const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
+        const nextPlayer = getNextPlayer(game.declarationPlayer || 1, game.playerCount, turnOrder);
 
-        let firstCard = null;
-        // Check if we need to put a new card on the field (if field is currently empty)
-        const currentField = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId))
-          .limit(1);
+        await db.update(games).set({
+          declaredSpec: input.spec,
+          declaredDirection: input.direction,
+          currentTurn: nextPlayer,
+        }).where(eq(games.id, input.gameId));
 
-        if (currentField.length === 0) {
-          // Draw from decks instead of allBikes to avoid duplicates
-          const gameDecks = await db
-            .select()
-            .from(decks)
-            .where(eq(decks.gameId, input.gameId));
-          
-          const nonEmptyDecks = gameDecks.filter((d: any) => {
-            const ids = JSON.parse(d.bikeIds);
-            return ids.length > 0;
-          });
-
-          if (nonEmptyDecks.length > 0) {
-            // Pick the first available deck for the dealer card
-            const selectedDeck = nonEmptyDecks[0];
-            const deckIds = JSON.parse(selectedDeck.bikeIds);
-            const drawnId = deckIds[0];
-            const remainingDeckIds = deckIds.slice(1);
-
-            // Update deck
-            await db
-              .update(decks)
-              .set({ bikeIds: JSON.stringify(remainingDeckIds) })
-              .where(eq(decks.id, selectedDeck.id));
-
-            // Place on table as played by "dealer" (player 0)
-            await db.insert(playedCards).values({
-              gameId: input.gameId,
-              playerId: 0, // 0 = dealer / field card
-              bikeIds: JSON.stringify([drawnId]),
-            });
-
-            // Get bike details for return
-            const bikeRecord = await db.select().from(bikes).where(eq(bikes.id, drawnId)).limit(1);
-            firstCard = bikeRecord[0];
-          }
-        }
-
-        return { 
-          success: true, 
-          spec: input.spec, 
-          direction: input.direction,
-          nextPlayer,
-          firstCard,
-        };
+        return { success: true, spec: input.spec, direction: input.direction, nextPlayer };
       } catch (error) {
         console.error("Error declaring spec:", error);
         throw error;
@@ -311,157 +218,62 @@ export const gameRouter = router({
    * Play a card
    */
   playCard: publicProcedure
-    .input(
-      z.object({
-        gameId: z.number(),
-        playerId: z.number(),
-        bikeIds: z.array(z.number()).min(1),
-        bindDeclare: z.object({
-          type: z.enum(['maker', 'cylinders', 'transmission']),
-          value: z.string(),
-        }).optional(),
-      })
-    )
+    .input(z.object({
+      gameId: z.number(),
+      playerId: z.number(),
+      bikeIds: z.array(z.number()).min(1),
+      bindDeclare: z.object({
+        type: z.enum(['maker', 'cylinders', 'transmission']),
+        value: z.string(),
+      }).optional(),
+    }))
     .mutation(async ({ input }) => {
       try {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Get game state
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
+        console.log(`[PLAY] P${input.playerId} playing bikeIds=${JSON.stringify(input.bikeIds)}, gameId=${input.gameId}`);
+        await checkGameIntegrity(db, input.gameId, 'PLAY_BEFORE');
 
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
-
+        const gameRecord = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
+        const playerState = await db.select().from(gameStates).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId))).limit(1);
+        
+        if (!gameRecord.length || !playerState.length) throw new Error("Game or Player state not found");
         const game = gameRecord[0];
-
-        // Get player state
-        const playerState = await db
-          .select()
-          .from(gameStates)
-          .where(eq(gameStates.gameId, input.gameId))
-          .limit(1);
-
-        if (!playerState.length) {
-          throw new Error("Player state not found");
-        }
-
-        // Get bikes being played
-        const bikeRecords = await db
-          .select()
-          .from(bikes)
-          .where(inArray(bikes.id, input.bikeIds));
-
-        if (bikeRecords.length !== input.bikeIds.length) {
-          throw new Error("One or more bikes not found");
-        }
-
-        // Validate multiple cards have same spec value
-        const declaredSpec = game.declaredSpec as keyof typeof bikeRecords[0];
-        if (declaredSpec && bikeRecords.length > 1) {
-          const firstValue = bikeRecords[0][declaredSpec];
-          const allSame = bikeRecords.every(b => b[declaredSpec] === firstValue);
-          if (!allSame) {
-            throw new Error("Multiple cards must have the same declared spec value");
-          }
-        }
-
-        // Validate card beats the previous card (>= or <=)
-        const lastPlayedCard = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-          .limit(1);
-
-        if (lastPlayedCard.length > 0 && game.declaredSpec && game.declaredDirection) {
-          const lastBikeIds = JSON.parse(lastPlayedCard[0].bikeIds);
-          const lastBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds));
-          if (lastBikeRecords.length > 0) {
-            const lastBike = lastBikeRecords[lastBikeRecords.length - 1]; // Use last selected
-            const currentBike = bikeRecords[0]; // All have same spec value
-            
-            const currentValue = currentBike[game.declaredSpec as keyof typeof currentBike] as number;
-            const previousValue = lastBike[game.declaredSpec as keyof typeof lastBike] as number;
-            
-            if (game.declaredDirection === 'up' && currentValue < previousValue) {
-              throw new Error("Card value must be >= previous card");
-            } else if (game.declaredDirection === 'down' && currentValue > previousValue) {
-              throw new Error("Card value must be <= previous card");
-            }
-          }
-        }
-
-        // Validate card can be played (bind check) - use the first card for bind check against the top card of last play
-        if (game.currentBind && game.bindValue) {
-          const canPlay = canPlayCard(bikeRecords[0] as any, null, game.currentBind as any, game.bindValue);
-          if (!canPlay) {
-            throw new Error("Card does not meet bind requirements");
-          }
-        }
-
-        // Remove cards from player hand
         const hand = typeof playerState[0].hand === 'string' ? JSON.parse(playerState[0].hand) : playerState[0].hand || [];
+        console.log(`[PLAY] P${input.playerId} hand BEFORE: ${JSON.stringify(hand)}`);
+
+        // Update player hand
         const updatedHand = hand.filter((id: number) => !input.bikeIds.includes(id));
+        console.log(`[PLAY] P${input.playerId} hand AFTER: ${JSON.stringify(updatedHand)}`);
+        await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
-        // Update player state
-        await db
-          .update(gameStates)
-          .set({ hand: JSON.stringify(updatedHand) as any })
-          .where(eq(gameStates.gameId, input.gameId));
-
-        // Store played card (bikeIds is a JSON array)
+        // Record played card
         await db.insert(playedCards).values({
           gameId: input.gameId,
           playerId: input.playerId,
           bikeIds: JSON.stringify(input.bikeIds),
         });
 
-        // Handle bind declaration if provided
+        // Handle bind
         if (input.bindDeclare) {
-          await db
-            .update(games)
-            .set({
-              currentBind: input.bindDeclare.type,
-              bindValue: input.bindDeclare.value,
-            })
-            .where(eq(games.id, input.gameId));
+          await db.update(games).set({ currentBind: input.bindDeclare.type, bindValue: input.bindDeclare.value }).where(eq(games.id, input.gameId));
         }
 
-        // Check if player won (hand is empty)
+        // Check win
         if (updatedHand.length === 0) {
-          await db
-            .update(games)
-            .set({
-              status: 'finished',
-            })
-            .where(eq(games.id, input.gameId));
-
-          return {
-            success: true,
-            gameFinished: true,
-            winner: input.playerId,
-          };
+          await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
+          await checkGameIntegrity(db, input.gameId, 'PLAY_AFTER_WIN');
+          return { success: true, gameFinished: true, winner: input.playerId };
         }
 
-        // Move to next player
+        // Next player
         const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
         const nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
-        await db
-          .update(games)
-          .set({ currentTurn: nextPlayer })
-          .where(eq(games.id, input.gameId));
+        await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
 
-        return {
-          success: true,
-          gameFinished: false,
-          nextPlayer,
-        };
+        await checkGameIntegrity(db, input.gameId, 'PLAY_AFTER');
+        return { success: true, gameFinished: false, nextPlayer };
       } catch (error) {
         console.error("Error playing card:", error);
         throw error;
@@ -478,21 +290,11 @@ export const gameRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
-
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
-
+        const gameRecord = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
+        if (!gameRecord.length) throw new Error("Game not found");
         const game = gameRecord[0];
-        // Mark player as passed
-        await db.update(gameStates)
-          .set({ passed: 1 })
-          .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
+
+        await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
         const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
         const activePlayers = allStates.filter(s => s.passed === 0);
@@ -501,32 +303,25 @@ export const gameRouter = router({
         let trickCleared = false;
 
         if (activePlayers.length <= 1) {
-          // Trick clears!
           trickCleared = true;
           nextPlayer = activePlayers.length === 1 ? activePlayers[0].playerId : 1;
-          // 場が流れてもplayedCardsは削除せず残す
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
-          await db.update(games)
-            .set({ 
-              currentBind: null, 
-              bindValue: null, 
-              prevDeclaredSpec: game.declaredSpec,
-              prevDeclaredDirection: game.declaredDirection,
-              declaredSpec: null,
-              declaredDirection: null,
-              declarationPlayer: nextPlayer, // 勝者が次の宣言を行う
-              currentTurn: nextPlayer 
-            })
-            .where(eq(games.id, input.gameId));
+          await db.update(games).set({ 
+            currentBind: null, 
+            bindValue: null, 
+            prevDeclaredSpec: game.declaredSpec,
+            prevDeclaredDirection: game.declaredDirection,
+            declaredSpec: null,
+            declaredDirection: null,
+            declarationPlayer: nextPlayer,
+            currentTurn: nextPlayer 
+          }).where(eq(games.id, input.gameId));
         } else {
           const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-          let curr = input.playerId;
-          for (let i = 0; i < game.playerCount; i++) {
-             curr = getNextPlayer(curr, game.playerCount, turnOrder);
-             if (activePlayers.some(p => p.playerId === curr)) {
-               nextPlayer = curr;
-               break;
-             }
+          nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
+          // Skip passed players
+          while (allStates.find(s => s.playerId === nextPlayer)?.passed === 1) {
+            nextPlayer = getNextPlayer(nextPlayer, game.playerCount, turnOrder);
           }
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
         }
@@ -539,93 +334,7 @@ export const gameRouter = router({
     }),
 
   /**
-   * Next Round - Reset game state for the next round
-   */
-  nextRound: publicProcedure
-    .input(z.object({ gameId: z.number() }))
-    .mutation(async ({ input }) => {
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
-
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
-
-        const game = gameRecord[0];
-
-        // Get last played card to determine next declaration player
-        const lastPlayed = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-          .limit(1);
-
-        const nextDeclarationPlayer = lastPlayed.length > 0 ? lastPlayed[0].playerId : 1;
-
-        // Clear played cards
-        await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
-
-        // Reset passed flags and hands
-        const allBikes = await db.select().from(bikes);
-        const shuffledBikes = allBikes.sort(() => Math.random() - 0.5);
-        
-        const playerStates = await db
-          .select()
-          .from(gameStates)
-          .where(eq(gameStates.gameId, input.gameId));
-
-        let bikeIndex = 0;
-        for (const playerState of playerStates) {
-          const hand = [];
-          for (let i = 0; i < 4; i++) {
-            if (bikeIndex < shuffledBikes.length) {
-              hand.push(shuffledBikes[bikeIndex].id);
-              bikeIndex++;
-            }
-          }
-          await db
-            .update(gameStates)
-            .set({ 
-              hand: JSON.stringify(hand) as any,
-              passed: 0,
-            })
-            .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, playerState.playerId)));
-        }
-
-        // Increment round and reset game state
-        await db
-          .update(games)
-          .set({
-            currentRound: game.currentRound + 1,
-            declarationPlayer: nextDeclarationPlayer,
-            currentTurn: nextDeclarationPlayer,
-            currentBind: null,
-            bindValue: null,
-            declaredSpec: null,
-            declaredDirection: null,
-          })
-          .where(eq(games.id, input.gameId));
-
-        return { 
-          success: true, 
-          nextRound: game.currentRound + 1,
-        };
-      } catch (error) {
-        console.error("Error advancing to next round:", error);
-        throw error;
-      }
-    }),
-
-  /**
-   * Draw from deck
+   * Draw card
    */
   drawCard: publicProcedure
     .input(z.object({ gameId: z.number(), playerId: z.number() }))
@@ -634,85 +343,39 @@ export const gameRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Get game state
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
+        console.log(`[DRAW] P${input.playerId} drawing card, gameId=${input.gameId}`);
+        await checkGameIntegrity(db, input.gameId, 'DRAW_BEFORE');
 
-        if (!gameRecord.length) {
-          throw new Error("Game not found");
-        }
+        const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+        const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+        if (nonEmptyDecks.length === 0) throw new Error("No cards in deck");
 
-        // Get all bikes
-        const allBikes = await db.select().from(bikes);
-        
-        // Get player state by gameId and playerId
-        const playerState = await db
-          .select()
-          .from(gameStates)
-          .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)))
-          .limit(1);
-
-        if (!playerState.length) {
-          throw new Error("Player state not found");
-        }
-
-        // Get current hand
-        const hand = typeof playerState[0].hand === 'string' 
-          ? JSON.parse(playerState[0].hand) 
-          : playerState[0].hand || [];
-
-        // MUST draw from the decks table to ensure no duplicates
-        const gameDecks = await db
-          .select()
-          .from(decks)
-          .where(eq(decks.gameId, input.gameId));
-        
-        const nonEmptyDecks = gameDecks.filter((d: any) => {
-          const ids = JSON.parse(d.bikeIds);
-          return ids.length > 0;
-        });
-        
-        if (nonEmptyDecks.length === 0) {
-          throw new Error("No cards available in the deck");
-        }
-
-        // Pick a random non-empty category
         const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
         const deckIds = JSON.parse(selectedDeck.bikeIds);
         const drawnId = deckIds[0];
-        const remainingDeckIds = deckIds.slice(1);
+        const remaining = deckIds.slice(1);
+        console.log(`[DRAW] Drew ID=${drawnId} from ${selectedDeck.category} deck. Remaining=${remaining.length}`);
 
-        // Update deck in DB
-        await db
-          .update(decks)
-          .set({ bikeIds: JSON.stringify(remainingDeckIds) })
-          .where(eq(decks.id, selectedDeck.id));
+        await db.update(decks).set({ bikeIds: JSON.stringify(remaining) }).where(eq(decks.id, selectedDeck.id));
 
+        const playerState = await db.select().from(gameStates).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId))).limit(1);
+        const hand = JSON.parse(playerState[0].hand);
+        console.log(`[DRAW] P${input.playerId} hand BEFORE: ${JSON.stringify(hand)}`);
+        if (hand.includes(drawnId)) {
+          console.error(`[DRAW] ★★★ DUPLICATE! drawnId=${drawnId} already in P${input.playerId} hand!`);
+        }
         const updatedHand = [...hand, drawnId];
+        console.log(`[DRAW] P${input.playerId} hand AFTER: ${JSON.stringify(updatedHand)}`);
+        await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
-        // Update player hand
-        await db
-          .update(gameStates)
-          .set({ hand: JSON.stringify(updatedHand) as any })
-          .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
+        const game = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
+        const nextPlayer = getNextPlayer(input.playerId, game[0].playerCount, [1, 2, 3, 4].slice(0, game[0].playerCount));
+        await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
 
-        // Move to next player
-        const turnOrder = [1, 2, 3, 4].slice(0, gameRecord[0].playerCount);
-        const nextPlayer = getNextPlayer(input.playerId, gameRecord[0].playerCount, turnOrder);
-        
-        await db
-          .update(games)
-          .set({ currentTurn: nextPlayer })
-          .where(eq(games.id, input.gameId));
+        await checkGameIntegrity(db, input.gameId, 'DRAW_AFTER');
 
-        return { 
-          success: true, 
-          drawnBike: randomBike.id,
-          nextPlayer,
-        };
+        const bike = await db.select().from(bikes).where(eq(bikes.id, drawnId)).limit(1);
+        return { success: true, drawnBike: bike[0], nextPlayer };
       } catch (error) {
         console.error("Error drawing card:", error);
         throw error;
@@ -720,7 +383,7 @@ export const gameRouter = router({
     }),
 
   /**
-   * CPU auto-play: AI decides and executes the CPU's turn
+   * CPU Play logic
    */
   cpuPlay: publicProcedure
     .input(z.object({ gameId: z.number() }))
@@ -729,166 +392,120 @@ export const gameRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        const gameRecord = await db
-          .select()
-          .from(games)
-          .where(eq(games.id, input.gameId))
-          .limit(1);
+        console.log(`[CPU] cpuPlay called, gameId=${input.gameId}`);
+        await checkGameIntegrity(db, input.gameId, 'CPU_BEFORE');
 
+        const gameRecord = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
         if (!gameRecord.length) throw new Error("Game not found");
         const game = gameRecord[0];
 
         const cpuPlayerId = game.currentTurn;
-        if (!cpuPlayerId || cpuPlayerId === 1) {
-          return { action: 'skip' as const, message: 'Not CPU turn' };
-        }
+        if (!cpuPlayerId || cpuPlayerId === 1) return { action: 'skip' };
 
-        // Get CPU's hand
-        const cpuState = await db
-          .select()
-          .from(gameStates)
-          .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)))
-          .limit(1);
-
-        if (!cpuState.length) throw new Error("CPU state not found");
-
-        const handIds: number[] = typeof cpuState[0].hand === 'string'
-          ? JSON.parse(cpuState[0].hand)
-          : cpuState[0].hand || [];
+        const cpuState = await db.select().from(gameStates).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId))).limit(1);
+        const handIds = JSON.parse(cpuState[0].hand);
+        console.log(`[CPU] P${cpuPlayerId} hand: ${JSON.stringify(handIds)}`);
 
         if (handIds.length === 0) {
-          // CPU has no cards, pass
-          const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-          const nextPlayer = getNextPlayer(cpuPlayerId, game.playerCount, turnOrder);
-          await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
-          return { action: 'pass' as const, cpuPlayerId, nextPlayer, gameFinished: false };
+           const nextPlayer = getNextPlayer(cpuPlayerId, game.playerCount, [1, 2, 3, 4].slice(0, game.playerCount));
+           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+           return { action: 'pass', nextPlayer };
         }
 
-        // Get bike details for hand
         const handBikes = await db.select().from(bikes).where(inArray(bikes.id, handIds));
-
-        // Get last played card for comparison
-        const lastPlayedRecords = await db
-          .select()
-          .from(playedCards)
-          .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-          .limit(1);
-
-        let playedBikesList: any[] = [];
-        if (lastPlayedRecords.length > 0) {
-          const lastBikeIds: number[] = JSON.parse(lastPlayedRecords[0].bikeIds);
-          if (lastBikeIds.length > 0) {
-            const lastBikes = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds));
-            playedBikesList = lastBikes;
-          }
+        const lastPlayed = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).orderBy(desc(playedCards.playedAt)).limit(1);
+        let lastBikes: any[] = [];
+        if (lastPlayed.length > 0) {
+          const lastIds = JSON.parse(lastPlayed[0].bikeIds);
+          lastBikes = await db.select().from(bikes).where(inArray(bikes.id, lastIds));
         }
 
-        // Use CPU AI to decide action
-        const decision = decideCPUAction(
-          handBikes as any,
-          playedBikesList as any,
-          game.declaredSpec || 'cylinders',
-          game.declaredDirection || 'up',
-          game.currentBind || undefined,
-          game.bindValue || undefined
-        );
-
+        const decision = decideCPUAction(handBikes as any, lastBikes, game.declaredSpec as any, game.declaredDirection as any, game.currentBind as any, game.bindValue as any);
+        console.log(`[CPU] P${cpuPlayerId} decision: ${decision.action}`);
         const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
         const nextPlayer = getNextPlayer(cpuPlayerId, game.playerCount, turnOrder);
 
-        if (decision.action === 'play' && decision.bikeIds && decision.bikeIds.length > 0) {
-          // Remove cards from CPU hand
-          const updatedHand = handIds.filter((id) => !decision.bikeIds!.includes(id));
-          await db
-            .update(gameStates)
-            .set({ hand: JSON.stringify(updatedHand) as any })
-            .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
-
-          // Record played card
-          await db.insert(playedCards).values({
-            gameId: input.gameId,
-            playerId: cpuPlayerId,
-            bikeIds: JSON.stringify(decision.bikeIds),
-          });
-
-          // Handle bind
-          if (decision.bindDeclare) {
-            await db
-              .update(games)
-              .set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value })
-              .where(eq(games.id, input.gameId));
-          }
-
-          // Check win
+        if (decision.action === 'play' && decision.bikeIds) {
+          console.log(`[CPU] P${cpuPlayerId} plays: ${JSON.stringify(decision.bikeIds)}`);
+          const updatedHand = handIds.filter((id: number) => !decision.bikeIds!.includes(id));
+          console.log(`[CPU] P${cpuPlayerId} hand AFTER play: ${JSON.stringify(updatedHand)}`);
+          await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+          await db.insert(playedCards).values({ gameId: input.gameId, playerId: cpuPlayerId, bikeIds: JSON.stringify(decision.bikeIds) });
+          if (decision.bindDeclare) await db.update(games).set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value }).where(eq(games.id, input.gameId));
           if (updatedHand.length === 0) {
             await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
-            return {
-              action: 'play' as const,
-              cpuPlayerId,
-              bikeIds: decision.bikeIds,
-              bindDeclare: decision.bindDeclare,
-              gameFinished: true,
-              winner: cpuPlayerId,
-            };
+            await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
+            return { action: 'play', gameFinished: true, winner: cpuPlayerId };
           }
-
-          // Move to next player
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
-
-          return {
-            action: 'play' as const,
-            cpuPlayerId,
-            bikeIds: decision.bikeIds,
-            bindDeclare: decision.bindDeclare,
-            gameFinished: false,
-            nextPlayer,
-          };
+          await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
+          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds };
+        } else if (decision.action === 'draw') {
+           const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+           const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+           if (nonEmptyDecks.length > 0) {
+             const selectedDeck = nonEmptyDecks[0];
+             const deckIds = JSON.parse(selectedDeck.bikeIds);
+             const drawnId = deckIds[0];
+             console.log(`[CPU] P${cpuPlayerId} draws ID=${drawnId} from ${selectedDeck.category}`);
+             if (handIds.includes(drawnId)) {
+               console.error(`[CPU] ★★★ DUPLICATE! drawnId=${drawnId} already in P${cpuPlayerId} hand!`);
+             }
+             await db.update(decks).set({ bikeIds: JSON.stringify(deckIds.slice(1)) }).where(eq(decks.id, selectedDeck.id));
+             const newHand = [...handIds, drawnId];
+             console.log(`[CPU] P${cpuPlayerId} hand AFTER draw: ${JSON.stringify(newHand)}`);
+             await db.update(gameStates).set({ hand: JSON.stringify(newHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+           }
+           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+           await checkGameIntegrity(db, input.gameId, 'CPU_DRAW_AFTER');
+           return { action: 'draw', nextPlayer };
         } else {
-          // Pass
-          await db.update(gameStates)
-            .set({ passed: 1 })
-            .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
-
-          const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
-          const activePlayers = allStates.filter(s => s.passed === 0);
-          
-          let nextPlayer = cpuPlayerId;
-          let trickCleared = false;
-
-          if (activePlayers.length <= 1) {
-            trickCleared = true;
-            nextPlayer = activePlayers.length === 1 ? activePlayers[0].playerId : 1;
-            // 場が流れてもplayedCardsは削除せず残す
-            await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
-            await db.update(games)
-              .set({ 
-                currentBind: null, 
-                bindValue: null, 
-                declaredSpec: null,
-                declaredDirection: null,
-                declarationPlayer: nextPlayer, // 勝者が次の宣言を行う
-                currentTurn: nextPlayer 
-              })
-              .where(eq(games.id, input.gameId));
-          } else {
-            const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-            let curr = cpuPlayerId;
-            for (let i = 0; i < game.playerCount; i++) {
-               curr = getNextPlayer(curr, game.playerCount, turnOrder);
-               if (activePlayers.some(p => p.playerId === curr)) {
-                 nextPlayer = curr;
-                 break;
-               }
-            }
-            await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
-          }
-
-          return { action: 'pass' as const, cpuPlayerId, nextPlayer, trickCleared, gameFinished: false };
+           console.log(`[CPU] P${cpuPlayerId} passes`);
+           await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+           return { action: 'pass', nextPlayer };
         }
       } catch (error) {
-        console.error("Error in CPU play:", error);
+        console.error("CPU Play error:", error);
         throw error;
+      }
+    }),
+
+  /**
+   * DEBUG: Check for card duplication
+   */
+  debug_checkCardDuplication: publicProcedure
+    .input(z.object({ gameId: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) return { error: "DB not available" };
+
+        const bikeCount = await db.select({ count: sql<number>`count(*)` }).from(bikes).where(eq(bikes.id, 28));
+        const duplicatesResult = await db.execute(sql`SELECT id, count(*) as c FROM bikes GROUP BY id HAVING c > 1`);
+        const duplicates = (duplicatesResult as any).results || (duplicatesResult as any).rows || [];
+        const hayabusaByName = await db.select({ count: sql<number>`count(*)` }).from(bikes).where(sql`name LIKE '%Hayabusa%'`);
+
+        const playerStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
+        const handCounts = playerStates.map(ps => {
+          const hand = typeof ps.hand === 'string' ? JSON.parse(ps.hand) : ps.hand || [];
+          return { playerId: ps.playerId, count28: hand.filter((id: number) => id === 28).length, handLength: hand.length };
+        });
+
+        const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+        const deckCounts = gameDecks.map(d => {
+          const ids = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
+          return { category: d.category, count28: ids.filter((id: number) => id === 28).length, deckLength: ids.length };
+        });
+
+        const fieldCards = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId));
+        const fieldCounts = fieldCards.map(fc => {
+          const ids = typeof fc.bikeIds === 'string' ? JSON.parse(fc.bikeIds) : fc.bikeIds || [];
+          return { playerId: fc.playerId, count28: ids.filter((id: number) => id === 28).length };
+        });
+
+        return { bikesTableCount28: bikeCount[0]?.count || 0, duplicateIdsInDb: duplicates, hayabusaByNameCount: hayabusaByName[0]?.count || 0, handCounts, deckCounts, fieldCounts };
+      } catch (err: any) {
+        return { error: err.message || "Internal error" };
       }
     }),
 });

@@ -15,7 +15,9 @@ export default function GameSetup() {
   const handleStartGame = async (playerCount: number) => {
     setSelectedPlayers(playerCount);
     try {
-      const result = await createGameMutation.mutateAsync({ playerCount });
+      const searchParams = new URLSearchParams(window.location.search);
+      const edition = searchParams.get('edition') || 'r7_starter';
+      const result = await createGameMutation.mutateAsync({ playerCount, edition });
       // Navigate to game board with game ID and new flag
       setLocation(`/game/play?gameId=${result.gameId}&new=true`);
     } catch (error) {

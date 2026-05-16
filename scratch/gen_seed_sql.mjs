@@ -17,10 +17,15 @@ for (const bike of bikesData) {
     bike.seatHeight,
     bike.totalLength,
     bike.year,
-    bike.price
+    bike.price,
+    `'${bike.photoUrl || ''}'`,
+    bike.isTokyoRemake ? 1 : 0,
+    bike.isR6Complete ? 1 : 0,
+    bike.isR7Mega ? 1 : 0,
+    bike.isR7Starter ? 1 : 0
   ].join(', ');
   
-  sql += `INSERT INTO bikes (id, name, maker, category, cylinders, transmission, horsepower, fuelEfficiency, weight, seatHeight, totalLength, year, price) VALUES (${values});\n`;
+  sql += `INSERT INTO bikes (id, name, maker, category, cylinders, transmission, horsepower, fuelEfficiency, weight, seatHeight, totalLength, year, price, photoUrl, isTokyoRemake, isR6Complete, isR7Mega, isR7Starter) VALUES (${values});\n`;
 }
 
 fs.writeFileSync('./seed_bikes.sql', sql);

@@ -81,7 +81,7 @@ export default function BikeCard({
         `}
       >
         <div className="w-full flex flex-col h-full text-center relative z-10">
-          {/* Top Bar (ID & Badges) */}
+          {/* Top Bar (ID & Badges) - Reverted to original positions */}
           {size !== "small" && (
             <div className="flex justify-between items-start w-full mb-1">
               <div className="bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-br-lg border-b border-r border-white/10 -ml-3 -mt-3 sm:-ml-5 sm:-mt-5 z-20">
@@ -100,9 +100,9 @@ export default function BikeCard({
             </div>
           )}
 
-          {/* Header Info */}
-          <div className={`${isPokerRatio ? "mb-2" : "mb-3"} mt-1`}>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+          {/* Header Info - Center Top */}
+          <div className={`${isPokerRatio ? "mb-1" : "mb-2"} mt-1`}>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0">
               {bike.maker}
             </p>
             <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
@@ -112,13 +112,13 @@ export default function BikeCard({
 
           {size !== "small" && (
             <>
-              {/* Bike Image - Expanded */}
-              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-[4/3]"} bg-slate-950/40 rounded-lg overflow-hidden mb-3 border border-white/10 shadow-inner group relative`}>
+              {/* Bike Image - Border fitting the actual image size */}
+              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-square"} overflow-hidden mb-3 group relative flex items-center justify-center`}>
                 {bike.photoUrl ? (
                   <img 
                     src={bike.photoUrl} 
                     alt={bike.name} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-105 rounded-lg border border-white/20 shadow-lg"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
                     }}
@@ -128,8 +128,6 @@ export default function BikeCard({
                     <span className="text-[10px] font-bold tracking-tighter uppercase">No Image</span>
                   </div>
                 )}
-                {/* Visual Polish: Gradient overlay on image */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent pointer-events-none" />
               </div>
 
               {/* Quick Specs List */}

@@ -1,14 +1,14 @@
 {
-  "name": "touring-mania",
+  "name": "touring-mania-vite",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev:server": "npx wrangler dev --port 8787",
+    "dev:server": "npx wrangler dev server/_core/index.ts --port 8787",
     "dev:client": "vite",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "build": "vite build && esbuild server/_core/index.ts --platform=neutral --main-fields=module,main --bundle --format=esm --outfile=dist/public/_worker.js",
-    "deploy": "npm run build && npx wrangler pages deploy dist/public --project-name touring-mania",
+    "deploy": "npm run build && npx wrangler pages deploy dist/public --project-name touring-mania-vite",
     "start": "npx wrangler dev",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
@@ -98,6 +98,7 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
+    "csv-parse": "^6.2.1",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
     "pnpm": "^10.15.1",
@@ -109,7 +110,8 @@
     "typescript": "5.9.3",
     "vite": "^7.1.7",
     "vite-plugin-manus-runtime": "^0.0.57",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "wrangler": "^4.88.0"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "pnpm": {

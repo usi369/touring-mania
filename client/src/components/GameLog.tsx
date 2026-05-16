@@ -56,63 +56,69 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
       {/* Log Window */}
       <div
         className={cn(
-          "fixed z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-slate-700 shadow-2xl",
+          "fixed z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.6)]",
           // Mobile: Bottom sheet / Full screen
-          "bottom-0 left-0 right-0 h-[60vh] sm:h-[400px] rounded-t-2xl sm:rounded-2xl",
+          "bottom-0 left-0 right-0 h-[70vh] sm:h-[520px] rounded-t-3xl sm:rounded-2xl",
           // Desktop: Bottom right box
-          "sm:bottom-6 sm:right-6 sm:left-auto sm:w-80",
+          "sm:bottom-6 sm:right-6 sm:left-auto sm:w-[340px] bg-slate-900/95 backdrop-blur-xl",
           isOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         )}
       >
         {/* Header */}
-        <div className="bg-slate-800 border-b border-slate-700 p-3 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white">ゲームログ</h3>
+        <div className="bg-slate-800/50 border-b border-white/10 p-4 flex justify-between items-center shrink-0 relative overflow-hidden">
+          <div className="absolute left-0 top-0 w-1 h-full bg-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+          <div className="flex items-center gap-3">
+            <ScrollText className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-base font-black text-white tracking-tight uppercase italic">Battle Log</h3>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="w-8 h-8 text-slate-400 hover:text-white"
+            className="w-8 h-8 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </Button>
         </div>
 
         {/* Content */}
-        <ScrollArea ref={scrollRef} className="flex-1 bg-slate-900/95 backdrop-blur-md p-3">
-          <div className="space-y-3 pb-4">
+        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+          <div className="space-y-4 pb-4">
             {logs.length === 0 ? (
-              <p className="text-center text-slate-600 text-xs py-8">ログはありません</p>
+              <div className="py-20 flex flex-col items-center justify-center opacity-30">
+                <MessageSquare className="w-12 h-12 mb-3 text-slate-600" />
+                <p className="text-center text-slate-500 text-sm font-bold uppercase tracking-widest">No Data Logged</p>
+              </div>
             ) : (
               logs.map((log) => (
-                <div key={log.id} className="flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-1">
+                <div key={log.id} className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 group">
                   <div className="flex justify-between items-center">
                     <span className={cn(
-                      "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase",
-                      log.type === 'info' && "bg-blue-500/10 text-blue-400",
-                      log.type === 'success' && "bg-green-500/10 text-green-400",
-                      log.type === 'error' && "bg-red-500/10 text-red-400",
-                      log.type === 'warning' && "bg-amber-500/10 text-amber-400"
+                      "text-[10px] font-black px-2 py-0.5 rounded tracking-tighter uppercase",
+                      log.type === 'info' && "bg-blue-500/20 text-blue-400 border border-blue-500/20",
+                      log.type === 'success' && "bg-green-500/20 text-green-400 border border-green-500/20",
+                      log.type === 'error' && "bg-red-500/20 text-red-400 border border-red-500/20",
+                      log.type === 'warning' && "bg-amber-500/20 text-amber-400 border border-amber-500/20"
                     )}>
                       {log.type}
                     </span>
-                    <span className="text-[9px] text-slate-600">
+                    <span className="text-[10px] text-slate-600 font-mono">
                       {log.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-200 leading-relaxed pl-1 border-l-2 border-slate-800">
-                    {log.message}
-                  </p>
+                  <div className="pl-3 border-l-2 border-slate-800 group-hover:border-slate-600 transition-colors">
+                    <p className="text-sm text-slate-100 font-medium leading-relaxed tracking-tight">
+                      {log.message}
+                    </p>
+                  </div>
                 </div>
               ))
             )}
           </div>
         </ScrollArea>
 
-        {/* Footer / Fade effect */}
-        <div className="h-4 bg-gradient-to-t from-slate-900 to-transparent shrink-0" />
+        {/* Footer Fade */}
+        <div className="h-6 bg-gradient-to-t from-slate-950 to-transparent shrink-0 pointer-events-none" />
       </div>
 
       {/* Overlay for mobile to close when tapping outside */}

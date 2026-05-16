@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
 const db = new Database('./local.db');
-const count = db.prepare('SELECT COUNT(*) as count FROM bikes').get();
-console.log('Bike count:', count.count);
+const columns = db.prepare('PRAGMA table_info(bikes)').all();
+console.log('Bikes columns:', columns.map(c => c.name).join(', '));
 process.exit(0);

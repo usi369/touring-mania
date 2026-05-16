@@ -30,12 +30,20 @@ export default function Encyclopedia() {
 
   const [sortKey, setSortKey] = useState<string>("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterEdition, setFilterEdition] = useState<string>("all");
 
   const displayData = useMemo(() => {
     const data = bikesQuery.data || cachedData;
     if (!data) return null;
 
-    return [...data].sort((a, b) => {
+    // First filter by edition
+    let filtered = [...data];
+    if (filterEdition !== "all") {
+      filtered = filtered.filter(bike => !!bike[filterEdition as keyof typeof bike]);
+    }
+
+    // Then sort
+    return filtered.sort((a, b) => {
       const valA = a[sortKey];
       const valB = b[sortKey];
 
@@ -43,7 +51,7 @@ export default function Encyclopedia() {
       const factor = sortOrder === "asc" ? 1 : -1;
       return valA > valB ? factor : -factor;
     });
-  }, [bikesQuery.data, cachedData, sortKey, sortOrder]);
+  }, [bikesQuery.data, cachedData, sortKey, sortOrder, filterEdition]);
 
   const isLoading = bikesQuery.isLoading && !cachedData;
   const isOffline = bikesQuery.isError && cachedData;
@@ -67,6 +75,14 @@ export default function Encyclopedia() {
     { key: "year", label: "年式" },
   ];
 
+  const editionOptions = [
+    { key: "all", label: "すべて" },
+    { key: "isTokyoRemake", label: "東京リメイク" },
+    { key: "isR6Complete", label: "R6コンプリート" },
+    { key: "isR7Mega", label: "R7メガ" },
+    { key: "isR7Starter", label: "R7スターター" },
+  ];
+
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col px-4 py-8 items-center">
@@ -85,8 +101,29 @@ export default function Encyclopedia() {
         <div className="w-10" />
       </div>
 
+      {/* Edition Filter */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {editionOptions.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setFilterEdition(opt.key)}
+              className={`
+                flex-shrink-0 px-4 py-2 rounded-xl text-[12px] font-black transition-all duration-300 border-2
+                ${filterEdition === opt.key 
+                  ? "bg-gradient-to-r from-cyan-600 to-blue-600 border-cyan-400 text-white shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-105" 
+                  : "bg-slate-800/40 border-slate-700 text-slate-400 hover:border-slate-600"
+                }
+              `}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Sorting Controls */}
-      <div className="mb-6">
+      <div className="mb-1">
         <div className="flex items-center justify-center gap-2 mb-2 overflow-x-auto pb-2 no-scrollbar">
           <div className="flex-shrink-0 text-xs text-slate-500 font-bold flex items-center gap-1 ml-1">
             <SortAsc className="w-3 h-3" />
@@ -113,6 +150,27 @@ export default function Encyclopedia() {
           ))}
         </div>
       </div>
+
+      {/* Display Count */}
+      {displayData && (
+        <div className="mb-4 flex justify-center">
+          <div className="bg-slate-800/20 border border-slate-800 rounded-full px-3 py-0.5 backdrop-blur-md flex items-center gap-2">
+            <span className="text-[7px] text-slate-500 font-black uppercase tracking-tight opacity-70">DISPLAY</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[11px] font-black text-cyan-500/80 leading-none">
+                {displayData.length}
+              </span>
+              <span className="text-[9px] text-slate-600 font-bold">/ {(bikesQuery.data || cachedData)?.length || 0}</span>
+            </div>
+            {filterEdition !== "all" && (
+              <div className="h-2 w-[1px] bg-slate-800 mx-0.5" />
+            )}
+            {filterEdition !== "all" && (
+              <span className="text-[7px] text-cyan-600 font-black uppercase tracking-tighter">Filtered</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Loading State - Only show if no cache exists */}
       {isLoading && (
