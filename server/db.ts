@@ -227,6 +227,10 @@ export async function initializeGame(userId: number, playerCount: number, editio
     const hand = shuffled.slice(startIdx, startIdx + handSize);
     console.log(`[INIT] Player ${i} initial hand: ${JSON.stringify(hand)}`);
     
+    if (hand.length !== handSize) {
+      console.error(`[CRITICAL] Deal failed! Player ${i} got ${hand.length} cards instead of ${handSize}. Shuffled length: ${shuffled.length}`);
+    }
+
     await db.insert(gameStates).values({
       gameId,
       playerId: i,

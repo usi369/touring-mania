@@ -135,6 +135,13 @@ export default function GameBoard() {
           const handIds = getStateQuery.data.players[0].hand || [];
           const allBikes = getStateQuery.data.bikes || [];
           const bikesData = handIds.map((id: number) => allBikes.find((b: any) => b.id === id)).filter(Boolean);
+          
+          if (bikesData.length !== handIds.length) {
+            console.error(`[CRITICAL] Missing bikes in state payload! handIds: ${handIds.length}, bikesData: ${bikesData.length}`);
+            console.log('handIds:', handIds);
+            console.log('allBikes IDs:', allBikes.map((b: any) => b.id));
+          }
+
           setPlayerHand(bikesData);
           if (hasDeclared) setGamePhase('playing');
           else setGamePhase('declaration');
@@ -203,6 +210,13 @@ export default function GameBoard() {
     if (gameState?.players?.[0]) {
       const handIds = gameState.players[0].hand || [];
       const bikesData = await fetchBikes(handIds);
+      
+      if (bikesData && bikesData.length !== handIds.length) {
+        console.error(`[CRITICAL] fetchBikes returned fewer bikes than handIds! handIds: ${handIds.length}, returned: ${bikesData?.length}`);
+        console.log('handIds:', handIds);
+        console.log('bikesData IDs:', bikesData?.map((b: any) => b.id));
+      }
+
       setPlayerHand(bikesData);
       setGamePhase('handReview');
     } else {
