@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appRouter } from "./routers";
+import { appRouter } from "./appRouter";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
 
@@ -10,9 +10,7 @@ type CookieCall = {
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
-function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] } {
-  const clearedCookies: CookieCall[] = [];
-
+function createAuthContext(): { ctx: TrpcContext } {
   const user: AuthenticatedUser = {
     id: 1,
     openId: "sample-user",
@@ -25,38 +23,34 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     lastSignedIn: new Date(),
   };
 
+  const req = new Request("https://example.com/api/auth/logout");
+
   const ctx: TrpcContext = {
     user,
-    req: {
-      protocol: "https",
-      headers: {},
-    } as TrpcContext["req"],
-    res: {
-      clearCookie: (name: string, options: Record<string, unknown>) => {
-        clearedCookies.push({ name, options });
-      },
-    } as TrpcContext["res"],
+    req,
+    env: {},
+    resHeaders: new Headers(),
   };
 
-  return { ctx, clearedCookies };
+  return { ctx };
 }
 
 describe("auth.logout", () => {
   it("clears the session cookie and reports success", async () => {
-    const { ctx, clearedCookies } = createAuthContext();
+    const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
     const result = await caller.auth.logout();
 
     expect(result).toEqual({ success: true });
-    expect(clearedCookies).toHaveLength(1);
-    expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
-    expect(clearedCookies[0]?.options).toMatchObject({
-      maxAge: -1,
-      secure: true,
-      sameSite: "none",
-      httpOnly: true,
-      path: "/",
-    });
+    
+    const setCookie = ctx.resHeaders.get("Set-Cookie");
+    expect(setCookie).toBeDefined();
+    expect(setCookie).toContain(`${COOKIE_NAME}=;`);
+    expect(setCookie).toContain("Max-Age=-1");
+    expect(setCookie).toContain("Path=/");
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("Secure");
+    expect(setCookie).toContain("SameSite=None");
   });
 });

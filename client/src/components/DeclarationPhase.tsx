@@ -69,8 +69,8 @@ export default function DeclarationPhase({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center z-50 overflow-y-auto py-8">
-      <div className="w-full max-w-5xl mx-4 flex flex-col animate-in fade-in zoom-in duration-300">
+    <div className="fixed inset-0 bg-slate-950/85 flex flex-col items-center z-50 overflow-y-auto py-6 sm:py-12">
+      <div className="w-full max-w-4xl mx-auto px-4 my-auto flex flex-col animate-in fade-in zoom-in duration-300">
         
         <Card className="bg-slate-900/95 border-cyan-500/50 w-full p-6 sm:p-8 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl">
           <div className="mb-8 text-center">

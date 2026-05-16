@@ -173,7 +173,13 @@ export default function GameBoard() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         const result = await cpuPlayMutation.mutateAsync({ gameId });
         if (result.action === 'play') {
-          addLog(`Player ${result.cpuPlayerId} がカードを出しました`, 'info');
+          const playedBikes = result.bikeIds
+            ? result.bikeIds.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean)
+            : [];
+          const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
+          addLog(`Player ${result.cpuPlayerId} が ${bikeNames || "カード"} を出しました`, 'info');
+        } else if (result.action === 'draw') {
+          addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
         } else if (result.action === 'pass') {
           addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
         }
@@ -404,13 +410,15 @@ export default function GameBoard() {
                     isYourTurn={gameState.game.currentTurn === 1 && gamePhase === 'playing'}
                     fieldCards={gameState.fieldCards || []}
                     onCardPlay={async (ids, bind) => {
+                      const playedBikes = ids.map((id: number) => playerHand?.find((b: any) => b.id === id) || gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
+                      const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
                       const res = await playCardMutation.mutateAsync({ gameId: gameId!, playerId: 1, bikeIds: ids, bindDeclare: bind });
                       if (res.gameFinished) {
                         setGameResult({ winnerId: res.winner, winnerName: res.winner === 1 ? 'You' : `Player ${res.winner}` });
                         setGamePhase('finished');
                       }
                       await getStateQuery.refetch();
-                      addLog('カードを出しました', 'success');
+                      addLog(`${bikeNames || "カード"} を出しました`, 'success');
                     }}
                     onPass={async () => {
                       const res = await passMutation.mutateAsync({ gameId: gameId!, playerId: 1 });
