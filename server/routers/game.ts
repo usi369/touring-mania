@@ -177,6 +177,24 @@ export const gameRouter = router({
     }),
 
   /**
+   * Get bikes by IDs
+   */
+  getBikes: publicProcedure
+    .input(z.object({ bikeIds: z.array(z.number()) }))
+    .query(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        if (input.bikeIds.length === 0) return [];
+        const bikeRecords = await db.select().from(bikes).where(inArray(bikes.id, input.bikeIds));
+        return bikeRecords;
+      } catch (error) {
+        console.error("Error getting bikes:", error);
+        throw error;
+      }
+    }),
+
+  /**
    * Declare a spec for the round
    */
   declareSpec: publicProcedure
