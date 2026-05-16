@@ -82,8 +82,8 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
         </div>
 
         {/* Content */}
-        <ScrollArea ref={scrollRef} className="flex-1 p-4">
-          <div className="space-y-4 pb-4">
+        <ScrollArea ref={scrollRef} className="flex-1">
+          <div className="space-y-4 p-4 pb-8">
             {logs.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center opacity-30">
                 <MessageSquare className="w-12 h-12 mb-3 text-slate-600" />
