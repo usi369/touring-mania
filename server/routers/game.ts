@@ -343,21 +343,6 @@ export const gameRouter = router({
         if (activePlayers.length <= 1) {
           trickCleared = true;
           nextPlayer = activePlayers.length === 1 ? activePlayers[0].playerId : 1;
-          
-          if (activePlayers.length === 1) {
-            const winnerId = activePlayers[0].playerId;
-            await db.delete(playedCards).where(and(eq(playedCards.gameId, input.gameId), ne(playedCards.playerId, winnerId)));
-            const winnerCards = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, winnerId))).limit(1);
-            if (winnerCards.length > 0) {
-              const bikeIds = typeof winnerCards[0].bikeIds === 'string' ? JSON.parse(winnerCards[0].bikeIds) : winnerCards[0].bikeIds || [];
-              if (bikeIds.length > 0) {
-                const lastCard = bikeIds[bikeIds.length - 1];
-                await db.update(playedCards).set({ bikeIds: JSON.stringify([lastCard]) as any }).where(eq(playedCards.id, winnerCards[0].id));
-              }
-            }
-          } else {
-            await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
-          }
 
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
           await db.update(games).set({ 
@@ -540,20 +525,6 @@ export const gameRouter = router({
              trickCleared = true;
              const winnerState = allStates.find(s => s.passed === 0);
              nextPlayer = winnerState ? winnerState.playerId : cpuPlayerId;
-             
-             if (winnerState) {
-               await db.delete(playedCards).where(and(eq(playedCards.gameId, input.gameId), ne(playedCards.playerId, winnerState.playerId)));
-               const winnerCards = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, winnerState.playerId))).limit(1);
-               if (winnerCards.length > 0) {
-                 const bikeIds = typeof winnerCards[0].bikeIds === 'string' ? JSON.parse(winnerCards[0].bikeIds) : winnerCards[0].bikeIds || [];
-                 if (bikeIds.length > 0) {
-                   const lastCard = bikeIds[bikeIds.length - 1];
-                   await db.update(playedCards).set({ bikeIds: JSON.stringify([lastCard]) as any }).where(eq(playedCards.id, winnerCards[0].id));
-                 }
-               }
-             } else {
-               await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
-             }
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
              await db.update(games).set({ 
