@@ -35,7 +35,7 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
   return (
     <>
       {/* Toggle Button - Floating Icon */}
-      <div className="fixed bottom-20 right-4 z-40">
+      <div className="fixed bottom-24 right-4 sm:right-6 z-[60]">
         <Button
           onClick={onToggle}
           size="icon"

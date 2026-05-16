@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import { Loader2, BookOpen } from "lucide-react";
+import { Loader2, Home } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import DiceRollDialog from "@/components/DiceRollDialog";
 import DeclarationPhase from "@/components/DeclarationPhase";
@@ -307,13 +307,8 @@ export default function GameBoard() {
               </div>
             </div>
             
-            <button onClick={toggleLog} className="relative p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 transition-all">
-              <BookOpen className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-600 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-slate-900">
-                  {unreadCount}
-                </span>
-              )}
+            <button onClick={() => { clearToasts(); setLocation("/"); }} className="relative p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 transition-all">
+              <Home className="w-4 h-4" />
             </button>
           </div>
 
@@ -512,30 +507,7 @@ export default function GameBoard() {
       </AnimatePresence>
 
       {/* Game Log Overlay/Dialog */}
-      <AnimatePresence>
-        {isLogOpen && (
-          <>
-            {/* Backdrop overlay (Transparent but clickable to close) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={toggleLog}
-              className="fixed inset-0 bg-transparent z-[55] pointer-events-auto"
-            />
-            {/* Floating Log Box */}
-            <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed bottom-6 right-6 w-[340px] max-h-[80vh] z-[60] shadow-[0_0_40px_rgba(0,0,0,0.6)] border border-white/5 rounded-2xl overflow-hidden"
-            >
-              <GameLog logs={gameLogs} onClose={toggleLog} isOpen={isLogOpen} />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <GameLog logs={gameLogs} isOpen={isLogOpen} unreadCount={unreadCount} onClose={() => setIsLogOpen(false)} onToggle={toggleLog} />
 
       {/* Bike Details Modal */}
       {bikeDetails && (
