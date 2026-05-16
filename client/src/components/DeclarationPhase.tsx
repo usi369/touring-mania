@@ -69,135 +69,144 @@ export default function DeclarationPhase({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/20 flex flex-col items-center justify-center z-50 overflow-y-auto py-8">
-      <div className="w-full max-w-4xl mx-4 flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
-        {/* Hand Display (Always visible in a row) */}
-        {hand.length > 0 && (
-          <div className="w-full">
-            <p className="text-xs font-black text-white/60 uppercase tracking-[0.2em] mb-3 ml-2">あなたの手札（{hand.length}枚）</p>
-            <div className="flex gap-4 overflow-x-auto pb-6 pt-2 snap-x snap-mandatory -mx-2 px-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {hand.map((bike: any) => (
-                <div key={bike.id} className="flex-shrink-0 snap-center transition-transform hover:scale-110 duration-300">
-                  <div className="shadow-[0_0_20px_rgba(0,0,0,0.5)] rounded-2xl">
-                    <BikeCard bike={bike} size="medium" showDetails={true} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Declaration Card */}
-        <div className="w-full flex justify-center">
-          <Card className="bg-slate-900/90 border-cyan-500/50 w-full max-w-lg p-8 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-md">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white mb-2">宣言フェーズ</h2>
-            <p className="text-sm text-cyan-400">{playerName}の宣言</p>
+    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center z-50 overflow-y-auto py-8">
+      <div className="w-full max-w-5xl mx-4 flex flex-col animate-in fade-in zoom-in duration-300">
+        
+        <Card className="bg-slate-900/95 border-cyan-500/50 w-full p-6 sm:p-8 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-black text-white tracking-wider mb-2">宣言フェーズ</h2>
+            <p className="text-sm font-bold text-cyan-400">{playerName}の宣言</p>
           </div>
 
-          {/* Spec Selection */}
-          <div className="mb-6">
-            <label className="block text-sm text-slate-400 mb-2">
-              スペックを選択
-            </label>
-            <div className="relative">
-              <button
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white flex justify-between items-center hover:border-cyan-500 transition-colors"
-              >
-                <span>{selectedSpecLabel}</span>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    showDropdown ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg overflow-hidden z-10">
-                  {SPEC_OPTIONS.map((spec) => (
-                    <button
-                      key={spec.value}
-                      onClick={() => {
-                        setSelectedSpec(spec.value);
-                        setShowDropdown(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-white hover:bg-slate-700 transition-colors"
-                    >
-                      {spec.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Direction Selection */}
-          <div className="mb-6">
-            <label className="block text-sm text-slate-400 mb-2">
-              方向を選択
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setSelectedDirection("up")}
-                className={`py-3 px-4 rounded-lg font-bold transition-all ${
-                  selectedDirection === "up"
-                    ? "bg-cyan-500 text-white"
-                    : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-cyan-500"
-                }`}
-              >
-                ↑ 大きい
-              </button>
-              <button
-                onClick={() => setSelectedDirection("down")}
-                className={`py-3 px-4 rounded-lg font-bold transition-all ${
-                  selectedDirection === "down"
-                    ? "bg-pink-500 text-white"
-                    : "bg-slate-800 text-slate-400 border border-slate-700 hover:border-pink-500"
-                }`}
-              >
-                ↓ 小さい
-              </button>
-            </div>
-          </div>
-
-          {/* Banned declaration warning */}
-          {hasBan && (
-            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-              <p className="text-xs text-amber-400">
-                前回の宣言「{SPEC_OPTIONS.find(s => s.value === prevDeclaredSpec)?.label ?? prevDeclaredSpec}
-                {prevDeclaredDirection === 'up' ? ' ↑大きい' : ' ↓小さい'}」と同じ組み合わせは選べません
+          {/* Hand Display */}
+          {hand.length > 0 && (
+            <div className="w-full mb-8 bg-slate-950/50 rounded-2xl p-4 border border-white/5 shadow-inner">
+              <p className="text-sm font-bold text-white/60 text-center mb-4">
+                あなたの手札（{hand.length}枚）
               </p>
+              <div className="flex justify-start md:justify-center gap-3 sm:gap-4 overflow-x-auto pb-4 pt-2 px-2 scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+                {hand.map((bike: any) => (
+                  <div key={bike.id} className="flex-shrink-0 transition-transform hover:-translate-y-2 duration-300">
+                    <div className="shadow-[0_10px_20px_rgba(0,0,0,0.5)] rounded-2xl">
+                      <BikeCard bike={bike} size="medium" showDetails={true} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Preview */}
-          <div className={`mb-6 p-4 rounded-lg border ${
-            isBanned
-              ? 'bg-red-500/10 border-red-500/30'
-              : 'bg-slate-800/30 border-slate-700'
-          }`}>
-            <p className="text-sm text-slate-400 mb-2">宣言内容:</p>
-            <p className={`text-lg font-bold ${isBanned ? 'text-red-400' : 'text-white'}`}>
-              {selectedSpecLabel}が
-              {selectedDirection === "up" ? "大きい" : "小さい"}
-              ほうが勝ち
-              {isBanned && <span className="text-sm ml-2">（選択不可）</span>}
-            </p>
-          </div>
+          {/* Declaration Form Container */}
+          <div className="max-w-xl mx-auto w-full bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
+            {/* Spec Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-slate-300 mb-2">
+                スペックを選択
+              </label>
+              <div className="relative">
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="w-full bg-slate-900/80 border border-slate-600 rounded-xl p-4 text-white flex justify-between items-center hover:border-cyan-500 hover:bg-slate-800 transition-all shadow-sm"
+                >
+                  <span className="font-bold text-lg">{selectedSpecLabel}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-cyan-400 transition-transform ${
+                      showDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-          {/* Declare Button */}
-          <Button
-            onClick={handleDeclare}
-            disabled={isLoading || isBanned}
-            className={`w-full font-bold py-3 rounded-lg ${
+                {showDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-600 rounded-xl overflow-hidden z-20 shadow-2xl">
+                    {SPEC_OPTIONS.map((spec) => (
+                      <button
+                        key={spec.value}
+                        onClick={() => {
+                          setSelectedSpec(spec.value);
+                          setShowDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0"
+                      >
+                        {spec.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Direction Selection */}
+            <div className="mb-8">
+              <label className="block text-sm font-bold text-slate-300 mb-2">
+                方向を選択
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setSelectedDirection("up")}
+                  className={`py-4 px-4 rounded-xl font-black text-lg transition-all shadow-sm ${
+                    selectedDirection === "up"
+                      ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-[1.02]"
+                      : "bg-slate-900/80 text-slate-400 border border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800"
+                  }`}
+                >
+                  ↑ 大きい
+                </button>
+                <button
+                  onClick={() => setSelectedDirection("down")}
+                  className={`py-4 px-4 rounded-xl font-black text-lg transition-all shadow-sm ${
+                    selectedDirection === "down"
+                      ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)] scale-[1.02]"
+                      : "bg-slate-900/80 text-slate-400 border border-slate-700 hover:border-pink-500/50 hover:bg-slate-800"
+                  }`}
+                >
+                  ↓ 小さい
+                </button>
+              </div>
+            </div>
+
+            {/* Banned declaration warning */}
+            {hasBan && (
+              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl shadow-inner">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 text-amber-500">⚠️</div>
+                  <p className="text-sm font-bold text-amber-400 leading-relaxed">
+                    前回の宣言「{SPEC_OPTIONS.find(s => s.value === prevDeclaredSpec)?.label ?? prevDeclaredSpec}
+                    {prevDeclaredDirection === 'up' ? ' ↑大きい' : ' ↓小さい'}」と同じ組み合わせは選べません
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Preview */}
+            <div className={`mb-8 p-5 rounded-xl border shadow-inner transition-colors ${
               isBanned
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white'
-            }`}
-          >
-            {isLoading ? "宣言中..." : isBanned ? "この組み合わせは宣言できません" : "宣言する"}
-          </Button>
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-slate-900/50 border-cyan-500/30'
+            }`}>
+              <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">宣言内容プレビュー</p>
+              <p className={`text-xl font-black ${isBanned ? 'text-red-400' : 'text-white'}`}>
+                {selectedSpecLabel} が
+                <span className={selectedDirection === "up" ? "text-cyan-400 mx-1" : "text-pink-400 mx-1"}>
+                  {selectedDirection === "up" ? "大きい" : "小さい"}
+                </span>
+                ほうが勝ち
+                {isBanned && <span className="block text-sm mt-2 text-red-500/80 font-bold">（この組み合わせは選択不可です）</span>}
+              </p>
+            </div>
+
+            {/* Declare Button */}
+            <Button
+              onClick={handleDeclare}
+              disabled={isLoading || isBanned}
+              className={`w-full font-black text-lg py-6 rounded-xl shadow-lg transition-all ${
+                isBanned
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                  : 'bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] border-none'
+              }`}
+            >
+              {isLoading ? "宣言中..." : isBanned ? "宣言不可" : "この内容で宣言する"}
+            </Button>
+          </div>
         </Card>
       </div>
     </div>
