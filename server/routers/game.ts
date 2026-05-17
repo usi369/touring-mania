@@ -147,7 +147,7 @@ export const gameRouter = router({
           .select()
           .from(playedCards)
           .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id));
+          .orderBy(asc(playedCards.playedAt), asc(playedCards.id));
 
         fieldCards.forEach((pc) => {
           const ids: number[] = JSON.parse(pc.bikeIds);
@@ -287,20 +287,11 @@ export const gameRouter = router({
         await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
         // Record played card
-        const currentPlayed = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, input.playerId))).limit(1);
-        if (currentPlayed.length > 0) {
-          const currentIds = typeof currentPlayed[0].bikeIds === 'string' ? JSON.parse(currentPlayed[0].bikeIds) : currentPlayed[0].bikeIds || [];
-          await db.update(playedCards).set({ 
-            bikeIds: JSON.stringify([...currentIds, ...input.bikeIds]) as any,
-            playedAt: new Date()
-          }).where(eq(playedCards.id, currentPlayed[0].id));
-        } else {
-          await db.insert(playedCards).values({
-            gameId: input.gameId,
-            playerId: input.playerId,
-            bikeIds: JSON.stringify(input.bikeIds),
-          });
-        }
+        await db.insert(playedCards).values({
+          gameId: input.gameId,
+          playerId: input.playerId,
+          bikeIds: JSON.stringify(input.bikeIds),
+        });
 
         // Handle bind
         if (input.bindDeclare) {
@@ -461,7 +452,7 @@ export const gameRouter = router({
         }
 
         const handBikes = await db.select().from(bikes).where(inArray(bikes.id, handIds));
-        const lastPlayed = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).orderBy(desc(playedCards.playedAt)).limit(1);
+        const lastPlayed = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).orderBy(desc(playedCards.playedAt), desc(playedCards.id)).limit(1);
         let lastBikes: any[] = [];
         if (lastPlayed.length > 0) {
           const lastIds = JSON.parse(lastPlayed[0].bikeIds);
@@ -489,27 +480,22 @@ export const gameRouter = router({
           console.log(`[CPU] P${cpuPlayerId} hand AFTER play: ${JSON.stringify(updatedHand)}`);
           await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
           
-          const currentPlayed = await db.select().from(playedCards).where(and(eq(playedCards.gameId, input.gameId), eq(playedCards.playerId, cpuPlayerId))).limit(1);
-          if (currentPlayed.length > 0) {
-            const currentIds = typeof currentPlayed[0].bikeIds === 'string' ? JSON.parse(currentPlayed[0].bikeIds) : currentPlayed[0].bikeIds || [];
-            await db.update(playedCards).set({ 
-              bikeIds: JSON.stringify([...currentIds, ...decision.bikeIds]) as any,
-              playedAt: new Date()
-            }).where(eq(playedCards.id, currentPlayed[0].id));
-          } else {
-            await db.insert(playedCards).values({ gameId: input.gameId, playerId: cpuPlayerId, bikeIds: JSON.stringify(decision.bikeIds) });
-          }
+          await db.insert(playedCards).values({ 
+            gameId: input.gameId, 
+            playerId: cpuPlayerId, 
+            bikeIds: JSON.stringify(decision.bikeIds) 
+          });
           
           if (decision.bindDeclare) await db.update(games).set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value }).where(eq(games.id, input.gameId));
           if (updatedHand.length === 0) {
             await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
             await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
-            return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId };
+            return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: decision.bindDeclare };
           }
           const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
           await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
-          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId };
+          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId, bindDeclare: decision.bindDeclare };
         } else if (decision.action === 'draw') {
            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
            const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);

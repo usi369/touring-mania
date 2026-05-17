@@ -25,10 +25,14 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
   // Auto-scroll to bottom when new logs arrive or opened
   useEffect(() => {
     if (isOpen && scrollRef.current) {
-      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
+      // Use requestAnimationFrame to ensure DOM is updated before scrolling
+      requestAnimationFrame(() => {
+        if (!scrollRef.current) return;
+        const viewport = scrollRef.current.querySelector('[data-slot="scroll-area-viewport"], [data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      });
     }
   }, [logs, isOpen]);
 

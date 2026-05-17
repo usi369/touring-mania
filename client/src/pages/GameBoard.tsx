@@ -178,6 +178,12 @@ export default function GameBoard() {
             : [];
           const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
           addLog(`Player ${result.cpuPlayerId} が ${bikeNames || "カード"} を出しました`, 'info');
+          
+          if (result.bindDeclare) {
+            const bindLabels: Record<string, string> = { maker: 'メーカー', cylinders: '気筒数', transmission: 'トランスミッション' };
+            const label = bindLabels[result.bindDeclare.type] || result.bindDeclare.type;
+            addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
+          }
         } else if (result.action === 'draw') {
           addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
         } else if (result.action === 'pass') {
