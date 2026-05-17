@@ -212,33 +212,34 @@ export default function CardPlayPhase({
       </div>
 
       {/* Card Selection Area */}
-      {isYourTurn && (
-        <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4">
-          <p className="text-xs text-slate-400 mb-3">カードを選択してください（← 横スクロールできます →）</p>
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {playerHand.map((bike: any) => {
-              const selectionIndex = selectedCards.indexOf(bike.id);
-              const isSelected = selectionIndex !== -1;
-              return (
-                <div key={bike.id} className="snap-start flex-shrink-0 relative">
-                  {isSelected && (
-                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md z-20">
-                      {selectionIndex + 1}
-                    </div>
-                  )}
-                  <BikeCard
-                    bike={bike}
-                    isSelected={isSelected}
-                    onClick={() => handleCardSelect(bike.id)}
-                    size="medium"
-                    activeSpec={declaredSpec}
-                  />
-                </div>
-              );
-            })}
-          </div>
+      <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4">
+        <p className="text-xs text-slate-400 mb-3">
+          {isYourTurn ? "カードを選択してください（← 横スクロールできます →）" : "あなたの手札（他のプレイヤーのターン中）"}
+        </p>
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {playerHand.map((bike: any) => {
+            const selectionIndex = selectedCards.indexOf(bike.id);
+            const isSelected = selectionIndex !== -1;
+            return (
+              <div key={bike.id} className="snap-start flex-shrink-0 relative">
+                {isSelected && (
+                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md z-20">
+                    {selectionIndex + 1}
+                  </div>
+                )}
+                <BikeCard
+                  bike={bike}
+                  isSelected={isSelected}
+                  onClick={() => handleCardSelect(bike.id)}
+                  size="medium"
+                  activeSpec={declaredSpec}
+                  showDetails={!isYourTurn}
+                />
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2">
