@@ -4,7 +4,6 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { gameRouter } from "./routers/game";
-import { cpuTurnRouter } from "./routers/cpuTurn";
 import { guestRouter } from "./routers/guest";
 import { getDb } from "./db";
 import { likes } from "../drizzle/schema";
@@ -31,7 +30,6 @@ export const appRouter = router({
     }),
   }),
   game: gameRouter,
-  cpuTurn: cpuTurnRouter,
   guest: guestRouter,
   bike: router({
     list: publicProcedure.query(async () => {

@@ -16,7 +16,7 @@ export default function GameSetup() {
     setSelectedPlayers(playerCount);
     try {
       const searchParams = new URLSearchParams(window.location.search);
-      const edition = searchParams.get('edition') || 'r7_starter';
+      const edition = (searchParams.get('edition') || 'r7_starter') as "r7_starter" | "tokyo_remake" | "r6_complete" | "r7_mega";
       const result = await createGameMutation.mutateAsync({ playerCount, edition });
       // Navigate to game board with game ID and new flag
       setLocation(`/game/play?gameId=${result.gameId}&new=true`);

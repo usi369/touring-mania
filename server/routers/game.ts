@@ -2,7 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { games, gameStates, bikes, decks, playedCards } from "../../drizzle/schema";
-import { eq, inArray, and, desc, sql, ne } from "drizzle-orm";
+import { eq, inArray, and, desc, asc, sql, ne } from "drizzle-orm";
 import { rollDice, determineTurnOrder, canPlayCard, getNextPlayer } from "../gameLogic";
 import { decideCPUAction, decideCPUDeclaration } from "../cpuAI";
 
@@ -42,7 +42,7 @@ async function checkGameIntegrity(db: any, gameId: number, caller: string) {
       idMap.get(id)!.push(source);
     });
 
-    const duplicates = [...idMap.entries()].filter(([, sources]) => sources.length > 1);
+    const duplicates = Array.from(idMap.entries()).filter(([_, sources]) => sources.length > 1);
     if (duplicates.length > 0) {
       console.error(`[INTEGRITY:${caller}] ★★★ DUPLICATE DETECTED! gameId=${gameId}`);
       duplicates.forEach(([id, sources]) => {
@@ -133,7 +133,7 @@ export const gameRouter = router({
         const game = gameRecord[0];
 
         const playerStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
-        const players = playerStates.map((state) => ({
+        const players = playerStates.map((state: any) => ({
           playerId: state.playerId,
           hand: typeof state.hand === 'string' ? JSON.parse(state.hand) : state.hand || [],
           passed: state.passed,
@@ -141,7 +141,7 @@ export const gameRouter = router({
         }));
 
         const allBikeIds = new Set<number>();
-        players.forEach((p) => (p.hand as number[]).forEach((id) => allBikeIds.add(id)));
+        players.forEach((p: any) => (p.hand as number[]).forEach((id) => allBikeIds.add(id)));
 
         const fieldCards = await db
           .select()
@@ -149,18 +149,18 @@ export const gameRouter = router({
           .where(eq(playedCards.gameId, input.gameId))
           .orderBy(asc(playedCards.playedAt), asc(playedCards.id));
 
-        fieldCards.forEach((pc) => {
+        fieldCards.forEach((pc: any) => {
           const ids: number[] = JSON.parse(pc.bikeIds);
           ids.forEach((id) => allBikeIds.add(id));
         });
 
         let bikeRecords: any[] = [];
         if (allBikeIds.size > 0) {
-          bikeRecords = await db.select().from(bikes).where(inArray(bikes.id, [...allBikeIds]));
+          bikeRecords = await db.select().from(bikes).where(inArray(bikes.id, Array.from(allBikeIds)));
         }
 
         const bikesMap = new Map(bikeRecords.map((b: any) => [b.id, b]));
-        const formattedFieldCards = fieldCards.map((pc) => {
+        const formattedFieldCards = fieldCards.map((pc: any) => {
           const ids: number[] = JSON.parse(pc.bikeIds);
           return {
             playerId: pc.playerId,
@@ -229,7 +229,7 @@ export const gameRouter = router({
         const existingFieldCards = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).limit(1);
         if (existingFieldCards.length === 0) {
           const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
-          const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+          const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
           if (nonEmptyDecks.length > 0) {
             const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
             const deckIds = JSON.parse(selectedDeck.bikeIds);
@@ -335,7 +335,7 @@ export const gameRouter = router({
         await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, input.playerId)));
 
         const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
-        const activePlayers = allStates.filter(s => s.passed === 0);
+        const activePlayers = allStates.filter((s: any) => s.passed === 0);
         
         let nextPlayer = input.playerId;
         let trickCleared = false;
@@ -359,7 +359,7 @@ export const gameRouter = router({
           const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
           nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
           // Skip passed players
-          while (allStates.find(s => s.playerId === nextPlayer)?.passed === 1) {
+          while (allStates.find((s: any) => s.playerId === nextPlayer)?.passed === 1) {
             nextPlayer = getNextPlayer(nextPlayer, game.playerCount, turnOrder);
           }
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
@@ -386,7 +386,7 @@ export const gameRouter = router({
         await checkGameIntegrity(db, input.gameId, 'DRAW_BEFORE');
 
         const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
-        const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+        const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
         if (nonEmptyDecks.length === 0) throw new Error("No cards in deck");
 
         const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
@@ -498,7 +498,7 @@ export const gameRouter = router({
           return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId, bindDeclare: decision.bindDeclare };
         } else if (decision.action === 'draw') {
            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
-           const nonEmptyDecks = gameDecks.filter(d => JSON.parse(d.bikeIds).length > 0);
+           const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
            if (nonEmptyDecks.length > 0) {
              const selectedDeck = nonEmptyDecks[0];
              const deckIds = JSON.parse(selectedDeck.bikeIds);
@@ -520,16 +520,16 @@ export const gameRouter = router({
            console.log(`[CPU] P${cpuPlayerId} passes`);
            await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
            
-           const cpuStateIndex = allStates.findIndex(s => s.playerId === cpuPlayerId);
+           const cpuStateIndex = allStates.findIndex((s: any) => s.playerId === cpuPlayerId);
            if (cpuStateIndex !== -1) allStates[cpuStateIndex].passed = 1;
-           const passedCount = allStates.filter(s => s.passed === 1).length;
+           const passedCount = allStates.filter((s: any) => s.passed === 1).length;
            
            let nextPlayer;
            let trickCleared = false;
            
            if (passedCount >= game.playerCount - 1) {
              trickCleared = true;
-             const winnerState = allStates.find(s => s.passed === 0);
+             const winnerState = allStates.find((s: any) => s.passed === 0);
              nextPlayer = winnerState ? winnerState.playerId : cpuPlayerId;
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
@@ -570,19 +570,19 @@ export const gameRouter = router({
         const hayabusaByName = await db.select({ count: sql<number>`count(*)` }).from(bikes).where(sql`name LIKE '%Hayabusa%'`);
 
         const playerStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
-        const handCounts = playerStates.map(ps => {
+        const handCounts = playerStates.map((ps: any) => {
           const hand = typeof ps.hand === 'string' ? JSON.parse(ps.hand) : ps.hand || [];
           return { playerId: ps.playerId, count28: hand.filter((id: number) => id === 28).length, handLength: hand.length };
         });
 
         const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
-        const deckCounts = gameDecks.map(d => {
+        const deckCounts = gameDecks.map((d: any) => {
           const ids = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
           return { category: d.category, count28: ids.filter((id: number) => id === 28).length, deckLength: ids.length };
         });
 
         const fieldCards = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId));
-        const fieldCounts = fieldCards.map(fc => {
+        const fieldCounts = fieldCards.map((fc: any) => {
           const ids = typeof fc.bikeIds === 'string' ? JSON.parse(fc.bikeIds) : fc.bikeIds || [];
           return { playerId: fc.playerId, count28: ids.filter((id: number) => id === 28).length };
         });

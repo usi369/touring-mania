@@ -8,7 +8,7 @@ let _db: any = null;
  * Initialize the database connection.
  * Called with a D1Database (for Workers).
  */
-export async function initDb(d1: any) {
+export async function initDb(d1?: any) {
   if (d1 && !_db) {
     const { drizzle: drizzleD1 } = await import("drizzle-orm/d1");
     _db = drizzleD1(d1);
@@ -176,9 +176,9 @@ export async function initializeGame(userId: number, playerCount: number, editio
   }
 
   // 1. Strict deduplication using Set and Map
-  const uniqueIdSet = new Set(selectedBikesRaw.map(b => b.id));
+  const uniqueIdSet = new Set(selectedBikesRaw.map((b: any) => b.id));
   const bikeMap = new Map();
-  selectedBikesRaw.forEach(bike => {
+  selectedBikesRaw.forEach((bike: any) => {
     if (!bikeMap.has(bike.id)) {
       bikeMap.set(bike.id, bike);
     }
@@ -363,7 +363,7 @@ export async function calculateOptimalDeclaration(gameId: number, playerId: numb
 
   const hand: number[] = JSON.parse(gameState[0].hand);
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   // Get all bikes in hand
   const handBikes = hand.map(id => bikesMap.get(id)!).filter(Boolean);
@@ -382,7 +382,7 @@ export async function calculateOptimalDeclaration(gameId: number, playerId: numb
   let maxPlayable = 0;
 
   for (const condition of conditions) {
-    const playable = handBikes.filter(bike => {
+    const playable = handBikes.filter((bike: any) => {
       const value = getComparisonValue(bike, condition);
       return value > 0;
     }).length;
@@ -433,7 +433,7 @@ export async function getPlayableCards(gameId: number, playerId: number) {
   if (!lastBike) return [];
 
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   const playable: number[] = [];
   const lastValue = getComparisonValue(lastBike, declaration.condition as ComparisonCondition);
@@ -480,7 +480,7 @@ export async function validateCardPlay(gameId: number, playerId: number, bikeIds
 
   // Check if all cards have same comparison value
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   const declaration = await getCurrentRoundDeclaration(gameId);
   if (!declaration) throw new Error("No declaration");
@@ -556,7 +556,7 @@ export async function checkAllPassed(gameId: number): Promise<boolean> {
   if (!game) throw new Error("Game not found");
 
   const states = await db.select().from(gameStates).where(eq(gameStates.gameId, gameId));
-  const allPassed = states.every(s => s.passed === 1);
+  const allPassed = states.every((s: any) => s.passed === 1);
 
   return allPassed;
 }
@@ -610,7 +610,7 @@ export async function checkGameFinished(gameId: number): Promise<boolean> {
   if (!db) throw new Error("Database not available");
 
   const states = await db.select().from(gameStates).where(eq(gameStates.gameId, gameId));
-  const finished = states.some(s => s.rank === 1);
+  const finished = states.some((s: any) => s.rank === 1);
 
   return finished;
 }
@@ -662,7 +662,7 @@ export async function getAvailableBindTypes(gameId: number, playerId: number): P
 
   const hand: number[] = JSON.parse(gameState[0].hand);
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   const available: string[] = [];
 
@@ -716,7 +716,7 @@ export async function getPlayableCardsWithBind(gameId: number, playerId: number)
   if (!game || !game.currentBind) return playable;
 
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   return playable.filter(bikeId => {
     const bike = bikesMap.get(bikeId);
@@ -792,7 +792,7 @@ export async function getCPUBestMove(gameId: number, playerId: number) {
   if (!declaration) return null;
 
   const allBikes = await db.select().from(bikes);
-  const bikesMap = new Map(allBikes.map(b => [b.id, b]));
+  const bikesMap = new Map<number, any>(allBikes.map((b: any) => [b.id, b]));
 
   // Group by comparison value
   const grouped = new Map<number, number[]>();
@@ -875,7 +875,7 @@ export async function seedBikesInternal() {
     console.log(`[Seed] Found ${bikesData.length} bikes in JSON. Inserting...`);
 
     // Use a transaction for efficiency
-    await db.transaction(async (tx) => {
+    await db.transaction(async (tx: any) => {
       // Clear existing just in case
       await tx.delete(bikes).execute();
       
