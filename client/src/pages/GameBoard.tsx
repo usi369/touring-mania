@@ -126,6 +126,15 @@ export default function GameBoard() {
       return;
     }
     setGameId(id);
+
+    // URLから new=true パラメータを削除し、リロード時にサイコロフェーズから誤って再開するのを防ぎます
+    if (params.get("new") === "true") {
+      params.delete("new");
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+      window.history.replaceState(null, "", newUrl);
+    }
+
     return () => clearToasts();
   }, [setLocation, clearToasts]);
 
@@ -138,24 +147,29 @@ export default function GameBoard() {
       const params = new URLSearchParams(window.location.search);
       const isNewGame = params.get("new") === "true";
       
-      if (isInitialLoad && !isNewGame && getStateQuery.data.game.status === 'playing') {
-        const hasHand = getStateQuery.data.players && getStateQuery.data.players[0]?.hand?.length > 0;
-        const hasDeclared = !!getStateQuery.data.game.declaredSpec;
-        
-        if (hasHand) {
-          const handIds = getStateQuery.data.players[0].hand || [];
-          const allBikes = getStateQuery.data.bikes || [];
-          const bikesData = handIds.map((id: number) => allBikes.find((b: any) => b.id === id)).filter(Boolean);
+      if (isInitialLoad && !isNewGame) {
+        if (getStateQuery.data.game.status === 'finished') {
+          // すでに終了しているゲームなら、結果画面を表示する
+          setGamePhase('finished');
+        } else if (getStateQuery.data.game.status === 'playing') {
+          const hasHand = getStateQuery.data.players && getStateQuery.data.players[0]?.hand?.length > 0;
+          const hasDeclared = !!getStateQuery.data.game.declaredSpec;
           
-          if (bikesData.length !== handIds.length) {
-            console.error(`[CRITICAL] Missing bikes in state payload! handIds: ${handIds.length}, bikesData: ${bikesData.length}`);
-            console.log('handIds:', handIds);
-            console.log('allBikes IDs:', allBikes.map((b: any) => b.id));
-          }
+          if (hasHand) {
+            const handIds = getStateQuery.data.players[0].hand || [];
+            const allBikes = getStateQuery.data.bikes || [];
+            const bikesData = handIds.map((id: number) => allBikes.find((b: any) => b.id === id)).filter(Boolean);
+            
+            if (bikesData.length !== handIds.length) {
+              console.error(`[CRITICAL] Missing bikes in state payload! handIds: ${handIds.length}, bikesData: ${bikesData.length}`);
+              console.log('handIds:', handIds);
+              console.log('allBikes IDs:', allBikes.map((b: any) => b.id));
+            }
 
-          setPlayerHand(bikesData);
-          if (hasDeclared) setGamePhase('playing');
-          else setGamePhase('declaration');
+            setPlayerHand(bikesData);
+            if (hasDeclared) setGamePhase('playing');
+            else setGamePhase('declaration');
+          }
         }
       }
     }
