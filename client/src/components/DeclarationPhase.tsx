@@ -64,7 +64,7 @@ export default function DeclarationPhase({
   return (
     <>
       {/* ===== メインオーバーレイ ===== */}
-      <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-3 sm:p-5" style={{ background: "rgba(2,6,23,0.45)", backdropFilter: "blur(2px)" }}>
+      <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-3 sm:p-5" style={{ background: "rgba(2,6,23,0.25)" }}>
         <div
           className="w-full max-w-2xl flex flex-col gap-3"
           style={{ maxHeight: "100dvh", overflow: "hidden" }}
