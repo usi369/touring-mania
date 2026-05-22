@@ -328,19 +328,7 @@ export const gameRouter = router({
 
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-          const lastPlayed = await db.select().from(playedCards)
-            .where(eq(playedCards.gameId, input.gameId))
-            .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-            .limit(1);
-
-          if (lastPlayed.length > 0) {
-            await db.delete(playedCards).where(
-              and(
-                eq(playedCards.gameId, input.gameId),
-                ne(playedCards.id, lastPlayed[0].id)
-              )
-            );
-          }
+          // 場の履歴は削除せず全て残す（プレイヤーが過去に何が出たか確認できるようにする）
 
           await db.update(games).set({ 
             currentBind: null, 
@@ -531,19 +519,7 @@ export const gameRouter = router({
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-             const lastPlayed = await db.select().from(playedCards)
-               .where(eq(playedCards.gameId, input.gameId))
-               .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-               .limit(1);
-
-             if (lastPlayed.length > 0) {
-               await db.delete(playedCards).where(
-                 and(
-                   eq(playedCards.gameId, input.gameId),
-                   ne(playedCards.id, lastPlayed[0].id)
-                 )
-               );
-             }
+             // 場の履歴は削除せず全て残す（プレイヤーが過去に何が出たか確認できるようにする）
 
              await db.update(games).set({ 
                currentBind: null,
