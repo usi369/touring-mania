@@ -87,36 +87,40 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
 
         {/* Content */}
         <ScrollArea ref={scrollRef} className="flex-1">
-          <div className="space-y-4 p-4 pb-8">
+          <div className="space-y-4 p-4 pb-12">
             {logs.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center opacity-30">
                 <MessageSquare className="w-12 h-12 mb-3 text-slate-600" />
                 <p className="text-center text-slate-500 text-sm font-bold uppercase tracking-widest">No Data Logged</p>
               </div>
             ) : (
-              logs.map((log) => (
-                <div key={log.id} className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 group">
-                  <div className="flex justify-between items-center">
-                    <span className={cn(
-                      "text-[10px] font-black px-2 py-0.5 rounded tracking-tighter uppercase",
-                      log.type === 'info' && "bg-blue-500/20 text-blue-400 border border-blue-500/20",
-                      log.type === 'success' && "bg-green-500/20 text-green-400 border border-green-500/20",
-                      log.type === 'error' && "bg-red-500/20 text-red-400 border border-red-500/20",
-                      log.type === 'warning' && "bg-amber-500/20 text-amber-400 border border-amber-500/20"
-                    )}>
-                      {log.type}
-                    </span>
-                    <span className="text-[10px] text-slate-600 font-mono">
-                      {log.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
+              <>
+                {logs.map((log) => (
+                  <div key={log.id} className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 group">
+                    <div className="flex justify-between items-center">
+                      <span className={cn(
+                        "text-[10px] font-black px-2 py-0.5 rounded tracking-tighter uppercase",
+                        log.type === 'info' && "bg-blue-500/20 text-blue-400 border border-blue-500/20",
+                        log.type === 'success' && "bg-green-500/20 text-green-400 border border-green-500/20",
+                        log.type === 'error' && "bg-red-500/20 text-red-400 border border-red-500/20",
+                        log.type === 'warning' && "bg-amber-500/20 text-amber-400 border border-amber-500/20"
+                      )}>
+                        {log.type}
+                      </span>
+                      <span className="text-[10px] text-slate-600 font-mono">
+                        {log.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                    </div>
+                    <div className="pl-3 border-l-2 border-slate-800 group-hover:border-slate-600 transition-colors">
+                      <p className="text-sm text-slate-100 font-medium leading-relaxed tracking-tight">
+                        {log.message}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pl-3 border-l-2 border-slate-800 group-hover:border-slate-600 transition-colors">
-                    <p className="text-sm text-slate-100 font-medium leading-relaxed tracking-tight">
-                      {log.message}
-                    </p>
-                  </div>
-                </div>
-              ))
+                ))}
+                {/* 下部が見切れるのを防ぐための十分なスペース */}
+                <div className="h-6" aria-hidden="true" />
+              </>
             )}
           </div>
         </ScrollArea>
