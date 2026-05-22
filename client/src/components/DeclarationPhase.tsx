@@ -65,25 +65,25 @@ export default function DeclarationPhase({
     <>
       {/* ===== メインオーバーレイ ===== */}
       <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-3 sm:p-5" style={{ background: "rgba(2,6,23,0.25)" }}>
-        <div
-          className="w-full max-w-2xl flex flex-col gap-3"
-          style={{ maxHeight: "100dvh", overflow: "hidden" }}
+        <Card
+          className="w-full max-w-xl flex flex-col gap-4 bg-slate-900/95 border-cyan-500/30 p-5 sm:p-6 shadow-2xl backdrop-blur-xl rounded-2xl overflow-y-auto"
+          style={{ maxHeight: "92dvh" }}
         >
           {/* ヘッダー */}
-          <div className="text-center flex-shrink-0">
+          <div className="text-center flex-shrink-0 border-b border-white/10 pb-3">
             <h2
-              className="text-2xl sm:text-3xl font-black text-white tracking-wider"
-              style={{ textShadow: "0 0 30px rgba(34,211,238,0.5)" }}
+              className="text-xl sm:text-2xl font-black text-white tracking-wider"
+              style={{ textShadow: "0 0 20px rgba(34,211,238,0.4)" }}
             >
               宣言フェーズ
             </h2>
-            <p className="text-xs font-bold text-cyan-400 mt-0.5">{playerName}の宣言</p>
+            <p className="text-[10px] sm:text-xs font-bold text-cyan-400 mt-0.5">{playerName}の宣言</p>
           </div>
 
           {/* 手札アイコン列 */}
           {hand.length > 0 && (
-            <div className="flex-shrink-0">
-              <p className="text-[10px] font-bold text-white/40 text-center mb-2 tracking-widest uppercase">
+            <div className="flex-shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
+              <p className="text-[9px] font-bold text-white/40 text-center mb-2 tracking-widest uppercase">
                 あなたの手札（{hand.length}枚）— タップで詳細確認
               </p>
               <div className="flex justify-center gap-2 sm:gap-3 flex-wrap">
@@ -96,16 +96,16 @@ export default function DeclarationPhase({
                   >
                     {/* アイコン画像 */}
                     <div
-                      className="relative overflow-hidden rounded-xl border-2 border-white/10 group-hover:border-cyan-400/70 transition-all duration-300"
+                      className="relative overflow-hidden rounded-xl border border-white/10 group-hover:border-cyan-400/70 transition-all duration-300"
                       style={{
-                        width: "72px",
-                        height: "72px",
+                        width: "60px",
+                        height: "60px",
                         background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08))",
                         boxShadow: "0 0 0 0 rgba(34,211,238,0)",
                       }}
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLDivElement).style.boxShadow =
-                          "0 0 16px rgba(34,211,238,0.3)";
+                          "0 0 12px rgba(34,211,238,0.25)";
                       }}
                       onMouseLeave={(e) => {
                         (e.currentTarget as HTMLDivElement).style.boxShadow =
@@ -134,8 +134,8 @@ export default function DeclarationPhase({
                     </div>
                     {/* バイク名 */}
                     <span
-                      className="text-[9px] font-bold text-white/70 group-hover:text-cyan-300 transition-colors duration-200 text-center leading-tight"
-                      style={{ maxWidth: "72px", wordBreak: "break-all" }}
+                      className="text-[8px] font-bold text-white/60 group-hover:text-cyan-300 transition-colors duration-200 text-center leading-tight truncate"
+                      style={{ maxWidth: "60px" }}
                     >
                       {bike.name}
                     </span>
@@ -146,9 +146,9 @@ export default function DeclarationPhase({
           )}
 
           {/* 宣言フォーム */}
-          <Card className="flex-shrink-0 bg-slate-900/95 border-cyan-500/30 p-4 sm:p-5 shadow-2xl backdrop-blur-xl rounded-2xl">
+          <div className="flex-shrink-0 space-y-4">
             {hasBan && (
-              <div className="mb-4 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+              <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
                 <p className="text-xs font-bold text-amber-400 leading-relaxed">
                   ⚠️ 前回「
                   {SPEC_OPTIONS.find((s) => s.value === prevDeclaredSpec)?.label ?? prevDeclaredSpec}
@@ -158,21 +158,21 @@ export default function DeclarationPhase({
             )}
 
             {/* スペック選択 */}
-            <div className="mb-4 relative">
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">
+            <div className="relative">
+              <label className="block text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">
                 スペックを選択
               </label>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="w-full bg-slate-800/80 border border-slate-600 rounded-xl px-4 py-3 text-white flex justify-between items-center hover:border-cyan-500 transition-all"
+                className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-white flex justify-between items-center hover:border-cyan-500/60 transition-all"
               >
-                <span className="font-bold text-base">{selectedSpecLabel}</span>
+                <span className="font-bold text-sm sm:text-base">{selectedSpecLabel}</span>
                 <ChevronDown
                   className={`w-4 h-4 text-cyan-400 transition-transform ${showDropdown ? "rotate-180" : ""}`}
                 />
               </button>
               {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-xl overflow-hidden z-20 shadow-2xl">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden z-20 shadow-2xl">
                   {SPEC_OPTIONS.map((spec) => (
                     <button
                       key={spec.value}
@@ -180,7 +180,7 @@ export default function DeclarationPhase({
                         setSelectedSpec(spec.value);
                         setShowDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0 text-sm"
+                      className="w-full text-left px-4 py-2 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0 text-xs sm:text-sm"
                     >
                       {spec.label}
                     </button>
@@ -190,27 +190,27 @@ export default function DeclarationPhase({
             </div>
 
             {/* 方向選択 */}
-            <div className="mb-4">
-              <label className="block text-xs font-bold text-slate-400 mb-1.5">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">
                 方向を選択
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setSelectedDirection("up")}
-                  className={`py-3 px-4 rounded-xl font-black text-base transition-all ${
+                  className={`py-2.5 px-4 rounded-xl font-black text-sm sm:text-base transition-all ${
                     selectedDirection === "up"
-                      ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-[0_0_15px_rgba(34,211,238,0.4)] scale-[1.02]"
-                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-cyan-500/50"
+                      ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(34,211,238,0.35)] scale-[1.01]"
+                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-cyan-500/40"
                   }`}
                 >
                   ↑ 大きい
                 </button>
                 <button
                   onClick={() => setSelectedDirection("down")}
-                  className={`py-3 px-4 rounded-xl font-black text-base transition-all ${
+                  className={`py-2.5 px-4 rounded-xl font-black text-sm sm:text-base transition-all ${
                     selectedDirection === "down"
-                      ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)] scale-[1.02]"
-                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-pink-500/50"
+                      ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.35)] scale-[1.01]"
+                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-pink-500/40"
                   }`}
                 >
                   ↓ 小さい
@@ -220,14 +220,14 @@ export default function DeclarationPhase({
 
             {/* プレビュー */}
             <div
-              className={`mb-4 px-4 py-3 rounded-xl border transition-colors ${
+              className={`px-4 py-2.5 rounded-xl border transition-colors ${
                 isBanned
                   ? "bg-red-500/10 border-red-500/30"
                   : "bg-slate-950/50 border-cyan-500/20"
               }`}
             >
-              <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">宣言内容</p>
-              <p className={`text-lg font-black ${isBanned ? "text-red-400" : "text-white"}`}>
+              <p className="text-[9px] font-bold text-slate-500 mb-0.5 uppercase tracking-widest">宣言内容</p>
+              <p className={`text-sm sm:text-base font-black ${isBanned ? "text-red-400" : "text-white"}`}>
                 {selectedSpecLabel} が
                 <span
                   className={`mx-1 ${
@@ -238,7 +238,7 @@ export default function DeclarationPhase({
                 </span>
                 ほうが勝ち
                 {isBanned && (
-                  <span className="block text-xs mt-1 text-red-500/80 font-bold">
+                  <span className="block text-[10px] mt-0.5 text-red-500/80 font-bold">
                     （この組み合わせは選択不可です）
                   </span>
                 )}
@@ -249,16 +249,16 @@ export default function DeclarationPhase({
             <Button
               onClick={handleDeclare}
               disabled={isLoading || isBanned}
-              className={`w-full font-black text-base py-5 rounded-xl shadow-lg transition-all ${
+              className={`w-full font-black text-sm sm:text-base py-4 rounded-xl shadow-lg transition-all ${
                 isBanned
                   ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                  : "bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] border-none"
+                  : "bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(34,211,238,0.4)] border-none"
               }`}
             >
               {isLoading ? "宣言中..." : isBanned ? "宣言不可" : "この内容で宣言する"}
             </Button>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
 
       {/* ===== バイク詳細オーバーレイ（タップで展開） ===== */}
