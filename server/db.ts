@@ -370,7 +370,36 @@ export async function initializeGame(userId: number, playerCount: number, editio
     { gameId, category: "large", bikeIds: JSON.stringify(largeCards) },
   ]);
 
+  await drawInitialFieldCard(db, gameId);
+
   return gameId;
+}
+
+/**
+ * Draw initial field card from a random non-empty deck and place it on the field
+ */
+export async function drawInitialFieldCard(db: any, gameId: number) {
+  const gameDecks = await db.select().from(decks).where(eq(decks.gameId, gameId));
+  const nonEmptyDecks = gameDecks.filter((d: any) => {
+    const ids = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
+    return ids.length > 0;
+  });
+  if (nonEmptyDecks.length > 0) {
+    const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
+    const deckIds = typeof selectedDeck.bikeIds === 'string' ? JSON.parse(selectedDeck.bikeIds) : selectedDeck.bikeIds || [];
+    const drawnId = deckIds[0];
+    const remaining = deckIds.slice(1);
+    await db.update(decks).set({ bikeIds: JSON.stringify(remaining) }).where(eq(decks.id, selectedDeck.id));
+    
+    await db.insert(playedCards).values({
+      gameId,
+      playerId: 0, // 0 represents the deck/system
+      bikeIds: JSON.stringify([drawnId]),
+    });
+    console.log(`[FIELD_INITIAL] Drew ID=${drawnId} from ${selectedDeck.category} deck as initial field card.`);
+    return drawnId;
+  }
+  return null;
 }
 
 /**

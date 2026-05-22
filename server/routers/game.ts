@@ -147,7 +147,7 @@ export const gameRouter = router({
           .select()
           .from(playedCards)
           .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(asc(playedCards.playedAt), asc(playedCards.id));
+          .orderBy(desc(playedCards.playedAt), desc(playedCards.id));
 
         fieldCards.forEach((pc: any) => {
           const ids: number[] = JSON.parse(pc.bikeIds);
@@ -225,25 +225,7 @@ export const gameRouter = router({
           currentTurn: nextPlayer,
         }).where(eq(games.id, input.gameId));
 
-        // Draw initial field card from a random deck ONLY if the field is empty (first declaration of the round)
-        const existingFieldCards = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).limit(1);
-        if (existingFieldCards.length === 0) {
-          const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
-          const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
-          if (nonEmptyDecks.length > 0) {
-            const selectedDeck = nonEmptyDecks[Math.floor(Math.random() * nonEmptyDecks.length)];
-            const deckIds = JSON.parse(selectedDeck.bikeIds);
-            const drawnId = deckIds[0];
-            const remaining = deckIds.slice(1);
-            await db.update(decks).set({ bikeIds: JSON.stringify(remaining) }).where(eq(decks.id, selectedDeck.id));
-            
-            await db.insert(playedCards).values({
-              gameId: input.gameId,
-              playerId: 0, // 0 represents the deck/system
-              bikeIds: JSON.stringify([drawnId]),
-            });
-          }
-        }
+
 
         return { success: true, spec: input.spec, direction: input.direction, nextPlayer };
       } catch (error) {
@@ -345,6 +327,21 @@ export const gameRouter = router({
           nextPlayer = activePlayers.length === 1 ? activePlayers[0].playerId : 1;
 
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
+
+          const lastPlayed = await db.select().from(playedCards)
+            .where(eq(playedCards.gameId, input.gameId))
+            .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+            .limit(1);
+
+          if (lastPlayed.length > 0) {
+            await db.delete(playedCards).where(
+              and(
+                eq(playedCards.gameId, input.gameId),
+                ne(playedCards.id, lastPlayed[0].id)
+              )
+            );
+          }
+
           await db.update(games).set({ 
             currentBind: null, 
             bindValue: null, 
@@ -533,7 +530,24 @@ export const gameRouter = router({
              nextPlayer = winnerState ? winnerState.playerId : cpuPlayerId;
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
+
+             const lastPlayed = await db.select().from(playedCards)
+               .where(eq(playedCards.gameId, input.gameId))
+               .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+               .limit(1);
+
+             if (lastPlayed.length > 0) {
+               await db.delete(playedCards).where(
+                 and(
+                   eq(playedCards.gameId, input.gameId),
+                   ne(playedCards.id, lastPlayed[0].id)
+                 )
+               );
+             }
+
              await db.update(games).set({ 
+               currentBind: null,
+               bindValue: null,
                prevDeclaredSpec: game.declaredSpec,
                prevDeclaredDirection: game.declaredDirection,
                declaredSpec: null,

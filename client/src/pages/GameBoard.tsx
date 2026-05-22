@@ -468,6 +468,7 @@ export default function GameBoard() {
         <DeclarationPhase
           playerName={gameState.game.declarationPlayer === 1 ? "You" : `Player ${gameState.game.declarationPlayer}`}
           hand={playerHand || []}
+          fieldCards={gameState.fieldCards || []}
           prevDeclaredSpec={gameState.game.prevDeclaredSpec}
           prevDeclaredDirection={gameState.game.prevDeclaredDirection}
           onDeclare={handleDeclaration}

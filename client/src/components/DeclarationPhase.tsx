@@ -14,6 +14,7 @@ interface DeclarationPhaseProps {
   hand?: any[];
   prevDeclaredSpec?: string | null;
   prevDeclaredDirection?: string | null;
+  fieldCards?: any[];
 }
 
 const SPEC_OPTIONS: { value: SpecType; label: string; unit: string }[] = [
@@ -33,6 +34,7 @@ export default function DeclarationPhase({
   hand = [],
   prevDeclaredSpec = null,
   prevDeclaredDirection = null,
+  fieldCards = [],
 }: DeclarationPhaseProps) {
   const [selectedSpec, setSelectedSpec] = useState<SpecType>("horsepower");
   const [selectedDirection, setSelectedDirection] = useState<DirectionType>("up");
@@ -69,7 +71,7 @@ export default function DeclarationPhase({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/85 flex flex-col items-center z-50 overflow-y-auto py-6 sm:py-12">
+    <div className="fixed inset-0 bg-slate-950/40 flex flex-col items-center z-50 overflow-y-auto py-6 sm:py-12">
       <div className="w-full max-w-4xl mx-auto px-4 my-auto flex flex-col animate-in fade-in zoom-in duration-300">
         
         <Card className="bg-slate-900/95 border-cyan-500/50 w-full p-6 sm:p-8 shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl">

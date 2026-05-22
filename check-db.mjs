@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 const db = new Database('./local.db');
-const columns = db.prepare('PRAGMA table_info(bikes)').all();
-console.log('Bikes columns:', columns.map(c => c.name).join(', '));
+const cylinders = db.prepare('SELECT DISTINCT cylinders FROM bikes').all();
+console.log('Distinct cylinders:', cylinders);
 process.exit(0);
+

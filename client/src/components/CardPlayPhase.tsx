@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/Toast";
+import { motion } from "framer-motion";
 
 interface CardPlayPhaseProps {
   currentPlayer: number;
@@ -174,19 +175,58 @@ export default function CardPlayPhase({
               // 複数枚出された場合も最新（最後に選択されたもの）を左にするためreverse
               return bikes.slice().reverse().map((bike: any, bikeIdx: number) => {
                 const isLatestCard = isLatestRecord && bikeIdx === 0;
+                const isCPU = fc.playerId !== 1 && fc.playerId !== 0;
+                const isPlayer = fc.playerId === 1;
                 
-                return (
-                  <div
-                    key={`${fc.id}-${bike.id}-${bikeIdx}`}
-                    className={`flex-shrink-0 transition-all duration-300 snap-center relative ${
-                      isLatestCard ? 'scale-105 z-10' : 'opacity-60 scale-95 hover:opacity-100'
-                    }`}
-                  >
-                    {isLatestCard && (
+                if (isLatestCard) {
+                  return (
+                    <motion.div
+                      key={`${fc.id}-${bike.id}-${bikeIdx}`}
+                      className="flex-shrink-0 snap-center relative z-10 scale-105"
+                      initial={{
+                        x: isCPU ? 300 : isPlayer ? 0 : 200,
+                        y: isCPU ? -150 : isPlayer ? 300 : 0,
+                        scale: 0.6,
+                        opacity: 0,
+                        rotate: isCPU ? 15 : isPlayer ? -10 : 0
+                      }}
+                      animate={{
+                        x: 0,
+                        y: 0,
+                        scale: 1.05,
+                        opacity: 1,
+                        rotate: 0
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 110,
+                        damping: 15,
+                        duration: 0.6
+                      }}
+                    >
                       <div className="absolute -top-4 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
                         現在の基準
                       </div>
-                    )}
+                      <div className="absolute top-2 right-2 z-20">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                          fc.playerId === 0 ? 'bg-amber-500/80 text-white' : 
+                          fc.playerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
+                        }`}>{playerLabel}</span>
+                      </div>
+                      <BikeCard 
+                        bike={bike} 
+                        size="medium" 
+                        activeSpec={declaredSpec}
+                      />
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={`${fc.id}-${bike.id}-${bikeIdx}`}
+                    className="flex-shrink-0 transition-all duration-300 snap-center relative opacity-60 scale-95 hover:opacity-100"
+                  >
                     <div className="absolute top-2 right-2 z-20">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
                         fc.playerId === 0 ? 'bg-amber-500/80 text-white' : 
@@ -251,7 +291,11 @@ export default function CardPlayPhase({
               onClick={() => {
                 const validation = validateSelection();
                 if (validation.valid) {
-                  setShowBindDialog(true);
+                  if (currentBind) {
+                    handlePlayCard();
+                  } else {
+                    setShowBindDialog(true);
+                  }
                 } else {
                   if (onLog) {
                     onLog(validation.reason || '無効なカードです', 'error');
