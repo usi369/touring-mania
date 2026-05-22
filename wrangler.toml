@@ -10,10 +10,6 @@ database_name = "touring-mania-db"
 database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
 migrations_dir = "drizzle"
 
-# Email Sending Binding
-[[send_email]]
-name = "SEND_EMAIL"
-
 # Production environment configurations
 [env.production]
 compatibility_date = "2024-04-03"
@@ -24,11 +20,6 @@ database_name = "touring-mania-db"
 database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
 migrations_dir = "drizzle"
 
-[[env.production.services]]
-binding = "SEND_EMAIL"
-service = "touring-mania-email-sender"
-environment = "production"
-
 # Preview environment configurations
 [env.preview]
 compatibility_date = "2024-04-03"
@@ -38,8 +29,3 @@ binding = "DB"
 database_name = "touring-mania-db"
 database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
 migrations_dir = "drizzle"
-
-[[env.preview.services]]
-binding = "SEND_EMAIL"
-service = "touring-mania-email-sender"
-environment = "production"
