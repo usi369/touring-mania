@@ -70,6 +70,11 @@ export default function GameBoard() {
     spec?: string;
     direction?: string;
   }>(null);
+  const [cpuBindAnim, setCpuBindAnim] = useState<null | {
+    playerId: number;
+    bindType: string;
+    bindValue: string;
+  }>(null);
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
     const newLog: LogEntry = {
@@ -198,6 +203,10 @@ export default function GameBoard() {
           if (result.bindDeclare) {
             const bindLabels: Record<string, string> = { maker: 'メーカー', cylinders: '気筒数', transmission: 'トランスミッション' };
             const label = bindLabels[result.bindDeclare.type] || result.bindDeclare.type;
+            // 縛り宣言アニメーションをカード演出の前に表示
+            setCpuBindAnim({ playerId: result.cpuPlayerId, bindType: label, bindValue: result.bindDeclare.value });
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            setCpuBindAnim(null);
             addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
           }
         } else if (result.action === 'draw') {
@@ -646,6 +655,83 @@ export default function GameBoard() {
                 />
               </motion.div>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CPU Bind Declaration Animation Overlay */}
+      <AnimatePresence>
+        {cpuBindAnim && (
+          <motion.div
+            key="cpu-bind"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[85] flex items-center justify-center pointer-events-none"
+          >
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 1.1, opacity: 0, y: -30 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              className="flex flex-col items-center gap-3 px-10 py-7 rounded-2xl"
+              style={{
+                background: 'linear-gradient(160deg, rgba(120,20,60,0.92) 0%, rgba(60,10,40,0.95) 100%)',
+                border: '1px solid rgba(236,72,153,0.5)',
+                boxShadow: '0 0 80px rgba(236,72,153,0.3), 0 0 160px rgba(236,72,153,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
+              }}
+            >
+              {/* 上部ライン */}
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="h-px rounded-full"
+                style={{ background: 'linear-gradient(to right, transparent, rgba(236,72,153,0.8), transparent)' }}
+              />
+              <p
+                className="text-[10px] font-black tracking-[0.5em] uppercase"
+                style={{ color: 'rgba(251,146,180,0.8)' }}
+              >
+                PLAYER {cpuBindAnim.playerId} — BIND
+              </p>
+              <div className="text-center">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="text-3xl sm:text-4xl font-black text-white"
+                  style={{
+                    textShadow: '0 0 30px rgba(236,72,153,0.7), 0 2px 4px rgba(0,0,0,0.5)',
+                    fontFamily: "'Inter', sans-serif",
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  {cpuBindAnim.bindType}縛り
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-lg font-bold mt-1"
+                  style={{
+                    color: 'rgba(251,191,210,0.9)',
+                    textShadow: '0 0 12px rgba(236,72,153,0.5)',
+                  }}
+                >
+                  「{cpuBindAnim.bindValue}」
+                </motion.p>
+              </div>
+              {/* 下部ライン */}
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="h-px rounded-full"
+                style={{ background: 'linear-gradient(to right, transparent, rgba(236,72,153,0.8), transparent)' }}
+              />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
