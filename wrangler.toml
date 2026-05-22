@@ -1,6 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "touring-mania-vite"
-# pages_build_output_dir = "dist/public"
 compatibility_date = "2024-04-03"
 
 # D1 Database Binding
@@ -10,11 +9,36 @@ database_name = "touring-mania-db"
 database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
 migrations_dir = "drizzle"
 
-# Assets (Cloudflare Pagesの場合は別の設定になりますが、Workersとして動かす場合を想定)
-# [assets]
-# directory = "./dist"
-# binding = "ASSETS"
-
 # Email Sending Binding
 [[send_email]]
 name = "SEND_EMAIL"
+
+# Production environment configurations
+[env.production]
+compatibility_date = "2024-04-03"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "touring-mania-db"
+database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
+migrations_dir = "drizzle"
+
+[[env.production.services]]
+binding = "SEND_EMAIL"
+service = "touring-mania-email-sender"
+environment = "production"
+
+# Preview environment configurations
+[env.preview]
+compatibility_date = "2024-04-03"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "touring-mania-db"
+database_id = "ef22a166-d951-41c1-8317-3195dbd37048"
+migrations_dir = "drizzle"
+
+[[env.preview.services]]
+binding = "SEND_EMAIL"
+service = "touring-mania-email-sender"
+environment = "production"
