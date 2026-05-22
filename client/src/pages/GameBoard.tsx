@@ -64,6 +64,12 @@ export default function GameBoard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [drawnBikeForAnimation, setDrawnBikeForAnimation] = useState<any>(null);
   const [showDrawAnimation, setShowDrawAnimation] = useState(false);
+  const [cpuDeclarationAnim, setCpuDeclarationAnim] = useState<null | {
+    phase: 'thinking' | 'announcing';
+    playerId: number;
+    spec?: string;
+    direction?: string;
+  }>(null);
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
     const newLog: LogEntry = {
@@ -258,7 +264,8 @@ export default function GameBoard() {
     const latestGame = getStateQuery.data?.game;
     const prevSpec = latestGame?.prevDeclaredSpec;
     const prevDir = latestGame?.prevDeclaredDirection;
-    
+    const cpuPlayerId = gameState?.game?.declarationPlayer || 2;
+
     const validCombinations = [];
     for (const spec of specs) {
       for (const dir of directions) {
@@ -268,7 +275,17 @@ export default function GameBoard() {
     }
     const chosen = validCombinations[Math.floor(Math.random() * validCombinations.length)];
     const dirLabel = chosen.direction === 'up' ? '大きい' : '小さい';
-    addLog(`Player ${gameState?.game?.declarationPlayer || 2} 宣言：${specLabels[chosen.spec]}が${dirLabel}`, 'info');
+
+    // 「考え中」フェーズ
+    setCpuDeclarationAnim({ phase: 'thinking', playerId: cpuPlayerId });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 「宣言！」フェーズ
+    setCpuDeclarationAnim({ phase: 'announcing', playerId: cpuPlayerId, spec: chosen.spec, direction: chosen.direction });
+    await new Promise(resolve => setTimeout(resolve, 2200));
+    setCpuDeclarationAnim(null);
+
+    addLog(`Player ${cpuPlayerId} 宣言：${specLabels[chosen.spec]}が${dirLabel}`, 'info');
     await handleDeclaration(chosen.spec, chosen.direction);
   };
 
@@ -535,6 +552,103 @@ export default function GameBoard() {
       {['declaration', 'playing', 'finished'].includes(gamePhase) && (
         <GameLog logs={gameLogs} isOpen={isLogOpen} unreadCount={unreadCount} onClose={() => setIsLogOpen(false)} onToggle={toggleLog} />
       )}
+
+      {/* CPU Declaration Animation Overlay */}
+      <AnimatePresence>
+        {cpuDeclarationAnim && (
+          <motion.div
+            key={cpuDeclarationAnim.phase}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[90] flex items-center justify-center"
+            style={{ background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(3px)' }}
+          >
+            {cpuDeclarationAnim.phase === 'thinking' ? (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex flex-col items-center gap-5"
+              >
+                {/* CPU アイコン */}
+                <div className="relative w-20 h-20 rounded-full border-2 border-cyan-500/60 flex items-center justify-center"
+                  style={{ boxShadow: '0 0 30px rgba(34,211,238,0.3)' }}>
+                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400/30 animate-ping" />
+                  <svg viewBox="0 0 24 24" fill="none" className="w-10 h-10 text-cyan-400">
+                    <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="9" cy="10" r="1.5" fill="currentColor" />
+                    <circle cx="15" cy="10" r="1.5" fill="currentColor" />
+                    <path d="M8 14s1 2 4 2 4-2 4-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M8 2v2M16 2v2M8 20v2M16 20v2M2 8h2M2 16h2M20 8h2M20 16h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-cyan-400/70 font-bold tracking-widest uppercase mb-1">PLAYER {cpuDeclarationAnim.playerId}</p>
+                  <p className="text-white font-black text-xl tracking-wide">思考中
+                    <motion.span
+                      animate={{ opacity: [1, 0, 1] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
+                    >...</motion.span>
+                  </p>
+                </div>
+                {/* スキャンライン */}
+                <div className="flex gap-1.5">
+                  {[0, 1, 2, 3, 4].map(i => (
+                    <motion.div
+                      key={i}
+                      className="w-1.5 h-6 rounded-full bg-cyan-500/60"
+                      animate={{ scaleY: [0.3, 1, 0.3] }}
+                      transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.12 }}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+                className="flex flex-col items-center gap-4 px-8 py-8 rounded-3xl border border-cyan-500/40"
+                style={{
+                  background: 'linear-gradient(160deg, rgba(15,23,42,0.97) 0%, rgba(8,30,63,0.97) 100%)',
+                  boxShadow: '0 0 60px rgba(34,211,238,0.25), 0 0 120px rgba(34,211,238,0.1)'
+                }}
+              >
+                <p className="text-[10px] font-black text-cyan-400 tracking-[0.4em] uppercase">PLAYER {cpuDeclarationAnim.playerId} DECLARES</p>
+                <div className="text-center">
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className="text-4xl sm:text-5xl font-black text-white leading-tight"
+                    style={{ textShadow: '0 0 40px rgba(34,211,238,0.6)' }}
+                  >
+                    {specLabels[cpuDeclarationAnim.spec!]}
+                  </motion.p>
+                  <motion.p
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className={`text-2xl font-black mt-1 ${
+                      cpuDeclarationAnim.direction === 'up' ? 'text-cyan-400' : 'text-pink-400'
+                    }`}
+                  >
+                    {cpuDeclarationAnim.direction === 'up' ? '↑ 大きい順' : '↓ 小さい順'}
+                  </motion.p>
+                </div>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ delay: 0.4, duration: 1.5 }}
+                  className="h-0.5 rounded-full"
+                  style={{ background: 'linear-gradient(to right, transparent, rgba(34,211,238,0.8), transparent)' }}
+                />
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bike Details Modal */}
       {bikeDetails && (
