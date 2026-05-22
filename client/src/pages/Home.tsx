@@ -47,6 +47,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [showRules, setShowRules] = useState(false);
   const [showTitleSelect, setShowTitleSelect] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
   const createGuestSessionMutation = trpc.guest.createSession.useMutation();
   const bikesQuery = trpc.bike.list.useQuery();
   const bikeCount = bikesQuery.data?.length || 0;
@@ -62,6 +63,10 @@ export default function Home() {
 
   const sendOtpMutation = trpc.auth.sendOtp.useMutation();
 
+  const activeGameQuery = trpc.game.getActiveGame.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   // Polling for email verification status
   const { data: pollData } = trpc.auth.pollAuthStatus.useQuery(
     { email, code: generatedCode },
@@ -76,12 +81,19 @@ export default function Home() {
       setIgnitionState("igniting");
       const timer = setTimeout(() => {
         setIgnitionState("engine_on");
-        login(pollData.token, pollData.user).then(() => {
+        login(pollData.token, pollData.user).then(async () => {
           setShowEmailModal(false);
-          setShowTitleSelect(true);
           setAuthStep("email");
           setGeneratedCode("");
           setIgnitionState("off");
+
+          // ログイン成功時に進行中のゲームをチェック
+          const res = await activeGameQuery.refetch();
+          if (res.data?.activeGameId) {
+            setShowResumeModal(true);
+          } else {
+            setShowTitleSelect(true);
+          }
         });
       }, 2200); // 2.2s ceremony
       return () => clearTimeout(timer);
@@ -97,7 +109,11 @@ export default function Home() {
 
   const handleStartGame = () => {
     if (isAuthenticated) {
-      setShowTitleSelect(true);
+      if (activeGameQuery.data?.activeGameId) {
+        setShowResumeModal(true);
+      } else {
+        setShowTitleSelect(true);
+      }
     } else {
       setShowEmailModal(true);
       setAuthStep("email");
@@ -311,6 +327,49 @@ export default function Home() {
               onClick={() => setShowTitleSelect(false)}
               variant="ghost"
               className="w-full mt-6 text-slate-400 hover:text-white"
+            >
+              キャンセル
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Resume Game Modal */}
+      {showResumeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-cyan-500/30 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">進行中のゲーム</h2>
+            <p className="text-slate-300 text-sm text-center mb-6 leading-relaxed">
+              中断されたゲームデータが存在します。<br />
+              続きから再開しますか？それとも新しく始めますか？
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => {
+                  setShowResumeModal(false);
+                  if (activeGameQuery.data?.activeGameId) {
+                    setLocation(`/game/play?gameId=${activeGameQuery.data.activeGameId}`);
+                  }
+                }}
+                className="w-full h-14 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold tracking-wider rounded-lg shadow-lg"
+              >
+                続きから再開
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowResumeModal(false);
+                  setShowTitleSelect(true);
+                }}
+                variant="outline"
+                className="w-full h-12 text-base font-semibold border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-300"
+              >
+                新しく始める
+              </Button>
+            </div>
+            <Button
+              onClick={() => setShowResumeModal(false)}
+              variant="ghost"
+              className="w-full mt-4 text-slate-400 hover:text-white"
             >
               キャンセル
             </Button>

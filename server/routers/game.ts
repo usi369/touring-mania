@@ -582,4 +582,36 @@ export const gameRouter = router({
         return { error: err.message || "Internal error" };
       }
     }),
+
+  /**
+   * Get active game for the current logged-in user
+   */
+  getActiveGame: publicProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const userId = ctx.user?.id;
+        if (!userId || userId === 0) {
+          return { activeGameId: null };
+        }
+
+        const activeGames = await db
+          .select({ id: games.id })
+          .from(games)
+          .where(and(eq(games.userId, userId), eq(games.status, 'playing')))
+          .orderBy(desc(games.createdAt))
+          .limit(1);
+
+        if (activeGames.length === 0) {
+          return { activeGameId: null };
+        }
+
+        return { activeGameId: activeGames[0].id };
+      } catch (error) {
+        console.error("Error getting active game:", error);
+        throw error;
+      }
+    }),
 });
