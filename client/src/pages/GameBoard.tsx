@@ -154,6 +154,16 @@ export default function GameBoard() {
     }
   }, [getStateQuery.data, getStateQuery.error, setLocation]);
 
+  // Keep playerHand in sync with gameState players and bikes
+  useEffect(() => {
+    if (gameState?.players?.[0] && gameState?.bikes) {
+      const handIds = gameState.players[0].hand || [];
+      const allBikes = gameState.bikes || [];
+      const bikesData = handIds.map((id: number) => allBikes.find((b: any) => b.id === id)).filter(Boolean);
+      setPlayerHand(bikesData);
+    }
+  }, [gameState?.players, gameState?.bikes]);
+
   useEffect(() => {
     if (gamePhase === 'playing' && gameState && !gameState.game.declaredSpec) {
       const declPlayer = gameState.game.declarationPlayer || 1;
