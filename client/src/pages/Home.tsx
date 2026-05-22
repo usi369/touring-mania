@@ -2,9 +2,9 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RulesScreen from "@/components/RulesScreen";
-import { HelpCircle, BookOpen, User, PlayCircle, LogIn } from "lucide-react";
+import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut } from "lucide-react";
 
 /**
  * Touring Mania - Title Screen
@@ -43,7 +43,7 @@ const MotorcycleIcon = ({ className }: { className?: string }) => (
 );
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
+  const { isLoaded: isAuthLoaded, user, isAuthenticated, login, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [showRules, setShowRules] = useState(false);
   const [showTitleSelect, setShowTitleSelect] = useState(false);
@@ -51,12 +51,70 @@ export default function Home() {
   const bikesQuery = trpc.bike.list.useQuery();
   const bikeCount = bikesQuery.data?.length || 0;
 
+  // OTP Authentication States
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [authStep, setAuthStep] = useState<"email" | "waiting_email">("email");
+  const [email, setEmail] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const sendOtpMutation = trpc.auth.sendOtp.useMutation();
+
+  // Polling for email verification status
+  const { data: pollData } = trpc.auth.pollAuthStatus.useQuery(
+    { email, code: generatedCode },
+    {
+      enabled: authStep === "waiting_email" && !!generatedCode,
+      refetchInterval: 3000,
+    }
+  );
+
+  useEffect(() => {
+    if (pollData?.verified && pollData.token && pollData.user) {
+      login(pollData.token, pollData.user).then(() => {
+        setShowEmailModal(false);
+        setShowTitleSelect(true);
+        setAuthStep("email");
+        setGeneratedCode("");
+      });
+    } else if (pollData && !pollData.verified && (pollData.status === "expired" || pollData.status === "not_found")) {
+      if (pollData.status === "expired") {
+        setErrorMessage("有効期限が切れました。最初からやり直してください。");
+        setAuthStep("email");
+        setGeneratedCode("");
+      }
+    }
+  }, [pollData]);
+
   const handleStartGame = () => {
     if (isAuthenticated) {
       setShowTitleSelect(true);
     } else {
-      // Redirect to coming soon page as login is not implemented yet
-      setLocation("/coming-soon");
+      setShowEmailModal(true);
+      setAuthStep("email");
+      setEmail("");
+      setErrorMessage("");
+    }
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSending(true);
+    setErrorMessage("");
+    setGeneratedCode("");
+
+    try {
+      const res = await sendOtpMutation.mutateAsync({ email });
+      if (res.success && res.code) {
+        setGeneratedCode(res.code);
+        setAuthStep("waiting_email");
+      }
+    } catch (err: any) {
+      console.error("Send OTP error:", err);
+      setErrorMessage(err.message || "認証の開始に失敗しました");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -151,6 +209,17 @@ export default function Home() {
           )}
         </Button>
 
+        {isAuthenticated && (
+          <Button
+            onClick={logout}
+            variant="outline"
+            className="w-full h-12 text-base font-semibold border-pink-500/30 text-pink-400 hover:bg-pink-950/20 hover:text-pink-300 transition-all duration-300"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            ログアウト
+          </Button>
+        )}
+
         {/* Guest Mode Button */}
         <Button
           onClick={handleGuestMode}
@@ -230,6 +299,106 @@ export default function Home() {
             >
               キャンセル
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Email OTP Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-cyan-500/30 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-4 text-center">
+              {authStep === "email" ? "メールアドレスで開始" : "ログインコード入力"}
+            </h2>
+            
+            {authStep === "email" ? (
+              <form onSubmit={handleSendOtp} className="space-y-4">
+                <p className="text-slate-400 text-xs text-center leading-relaxed">
+                  メールアドレスを入力すると、4桁のログインコードが送信されます。
+                </p>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-12 px-4 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                  disabled={isSending}
+                />
+                {errorMessage && (
+                  <p className="text-pink-500 text-xs text-center">{errorMessage}</p>
+                )}
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => setShowEmailModal(false)}
+                    variant="ghost"
+                    className="flex-1 text-slate-400 hover:text-white"
+                    disabled={isSending}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold"
+                    disabled={isSending}
+                  >
+                    {isSending ? "送信中..." : "コードを送信"}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-slate-400 text-xs text-center leading-relaxed">
+                  お使いのメールアプリから下記の内容でメールを送信してください。
+                </p>
+
+                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 space-y-2 text-sm text-slate-300">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">送信元のメールアドレス:</span>
+                    <span className="font-mono text-cyan-400 select-all">{email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">宛先:</span>
+                    <span className="font-mono select-all">login@nirin-hub.me</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">件名:</span>
+                    <span className="font-mono select-all">認証コード: {generatedCode}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={`mailto:login@nirin-hub.me?subject=認証コード: ${generatedCode}&body=そのまま送信してください。%0D%0A認証コード: ${generatedCode}`}
+                    className="w-full h-12 flex items-center justify-center bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold rounded-lg transition-colors text-center"
+                  >
+                    メールアプリを起動する
+                  </a>
+                  <p className="text-[10px] text-center text-slate-500">
+                    ※送信後、この画面は自動的に切り替わります（数秒〜十数秒かかります）
+                  </p>
+                </div>
+
+                {errorMessage && (
+                  <p className="text-pink-500 text-xs text-center">{errorMessage}</p>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setAuthStep("email");
+                      setGeneratedCode("");
+                    }}
+                    variant="ghost"
+                    className="w-full text-slate-400 hover:text-white"
+                  >
+                    戻る
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

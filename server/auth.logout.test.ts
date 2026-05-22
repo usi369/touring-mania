@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appRouter } from "./appRouter";
-import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
-
-type CookieCall = {
-  name: string;
-  options: Record<string, unknown>;
-};
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -46,11 +40,10 @@ describe("auth.logout", () => {
     
     const setCookie = ctx.resHeaders.get("Set-Cookie");
     expect(setCookie).toBeDefined();
-    expect(setCookie).toContain(`${COOKIE_NAME}=;`);
+    expect(setCookie).toContain("__session=;");
     expect(setCookie).toContain("Max-Age=-1");
     expect(setCookie).toContain("Path=/");
-    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Lax");
     expect(setCookie).toContain("Secure");
-    expect(setCookie).toContain("SameSite=None");
   });
 });

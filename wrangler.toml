@@ -14,3 +14,7 @@ migrations_dir = "drizzle"
 # [assets]
 # directory = "./dist"
 # binding = "ASSETS"
+
+# Email Sending Binding
+[[send_email]]
+name = "SEND_EMAIL"

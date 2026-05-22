@@ -1,7 +1,6 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "../appRouter";
 import { createContext } from "./context";
-import { handleOAuthCallback } from "./oauth";
 import { initEnv } from "./env";
 import { initDb } from "../db";
 
@@ -17,10 +16,7 @@ export default {
       await initDb(env.DB);
     }
 
-    // Handle OAuth callback
-    if (url.pathname === "/api/oauth/callback") {
-      return handleOAuthCallback(request);
-    }
+
 
     // Handle tRPC API requests
     if (url.pathname.startsWith("/api/trpc")) {

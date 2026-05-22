@@ -153,3 +153,16 @@ export const likes = sqliteTable("likes", {
 
 export type Like = typeof likes.$inferSelect;
 export type InsertLike = typeof likes.$inferInsert;
+
+export const otps = sqliteTable("otps", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email", { length: 320 }).notNull(),
+  code: text("code", { length: 10 }).notNull(),
+  status: text("status", { enum: ["pending", "verified", "expired"] }).default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
+});
+
+export type Otp = typeof otps.$inferSelect;
+export type InsertOtp = typeof otps.$inferInsert;

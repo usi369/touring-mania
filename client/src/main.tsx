@@ -5,7 +5,6 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getLoginUrl } from "./const";
 import "./index.css";
 import { ToastProvider } from "./components/Toast";
 
@@ -19,7 +18,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  // Clear invalid token and user info
+  localStorage.removeItem("touring-mania-jwt");
+  localStorage.removeItem("manus-runtime-user-info");
+
+  window.location.href = "/";
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -43,9 +46,28 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      fetch(input, init) {
+      async fetch(input, init) {
+        const headers = new Headers(init?.headers);
+        let tokenSet = false;
+        if (typeof window !== "undefined") {
+          try {
+            const token = localStorage.getItem("touring-mania-jwt");
+            console.log("[main.tsx DEBUG] Custom JWT token retrieved from localStorage:", token ? `${token.substring(0, 15)}...` : "null");
+            if (token) {
+              headers.set("Authorization", `Bearer ${token}`);
+              tokenSet = true;
+            }
+          } catch (e) {
+            console.error("[main.tsx ERROR] Failed to fetch custom JWT token from localStorage", e);
+          }
+        }
+        console.log("[main.tsx DEBUG] tRPC fetch request headers:", {
+          url: String(input),
+          tokenSet,
+        });
         return globalThis.fetch(input, {
           ...(init ?? {}),
+          headers,
           credentials: "include",
         });
       },

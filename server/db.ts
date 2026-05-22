@@ -1,5 +1,5 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
-import { InsertUser, users, bikes, games, gameStates, playedCards, roundHistory, decks, likes } from "../drizzle/schema";
+import { eq, and, desc, inArray, gt } from "drizzle-orm";
+import { InsertUser, users, bikes, games, gameStates, playedCards, roundHistory, decks, likes, otps } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: any = null;
@@ -97,6 +97,109 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by email: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by id: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createOtp(email: string, code: string, expiresAt: Date): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(otps).where(eq(otps.email, email));
+  await db.insert(otps).values({
+    email,
+    code,
+    status: "pending",
+    attempts: 0,
+    expiresAt,
+  });
+}
+
+export async function verifyOtpByEmailAndCode(email: string, code: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedCode = code.toUpperCase().trim();
+
+  const result = await db
+    .select()
+    .from(otps)
+    .where(
+      and(
+        eq(otps.email, normalizedEmail),
+        eq(otps.code, normalizedCode),
+        eq(otps.status, "pending"),
+        gt(otps.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+
+  if (result.length === 0) {
+    return false;
+  }
+
+  await db
+    .update(otps)
+    .set({ status: "verified" })
+    .where(eq(otps.id, result[0].id));
+
+  return true;
+}
+
+export async function getLatestOtp(email: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(otps)
+    .where(eq(otps.email, email))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function incrementOtpAttempts(email: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const otp = await getLatestOtp(email);
+  if (otp) {
+    await db
+      .update(otps)
+      .set({ attempts: otp.attempts + 1 })
+      .where(eq(otps.email, email));
+  }
+}
+
+export async function deleteOtp(email: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(otps).where(eq(otps.email, email));
 }
 
 /**

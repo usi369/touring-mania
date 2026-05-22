@@ -5,6 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { gameRouter } from "./routers/game";
 import { guestRouter } from "./routers/guest";
+import { authRouter } from "./routers/auth";
 import { getDb } from "./db";
 import { likes } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -12,23 +13,7 @@ import { eq } from "drizzle-orm";
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      let cookie = `${COOKIE_NAME}=; Max-Age=-1; Path=${cookieOptions.path || "/"}`;
-      if (cookieOptions.httpOnly) cookie += "; HttpOnly";
-      if (cookieOptions.secure) cookie += "; Secure";
-      if (cookieOptions.sameSite) {
-        const sameSite = cookieOptions.sameSite.charAt(0).toUpperCase() + cookieOptions.sameSite.slice(1);
-        cookie += `; SameSite=${sameSite}`;
-      }
-      ctx.resHeaders.set("Set-Cookie", cookie);
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
   game: gameRouter,
   guest: guestRouter,
   bike: router({

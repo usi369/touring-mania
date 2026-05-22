@@ -15,6 +15,20 @@
       "when": 1778118194085,
       "tag": "0001_solid_robin_chapel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779410330123,
+      "tag": "0002_zippy_banshee",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779416791379,
+      "tag": "0003_mighty_iron_fist",
+      "breakpoints": true
     }
   ]
 }
