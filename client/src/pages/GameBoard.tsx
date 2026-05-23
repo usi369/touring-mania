@@ -105,8 +105,10 @@ export default function GameBoard() {
   const passMutation = trpc.game.pass.useMutation();
   const drawCardMutation = trpc.game.drawCard.useMutation();
   const cpuPlayMutation = trpc.game.cpuPlay.useMutation();
+  const terminateMutation = trpc.game.terminate.useMutation();
   const utils = trpc.useUtils();
   const [cpuProcessing, setCpuProcessing] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   const fetchBikes = async (bikeIds: number[]) => {
     if (bikeIds.length === 0) return [];
@@ -369,7 +371,7 @@ export default function GameBoard() {
               </div>
             </div>
             
-            <button onClick={() => { clearToasts(); setLocation("/"); }} className="relative p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 transition-all">
+            <button onClick={() => setShowExitConfirm(true)} className="relative p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-cyan-400 transition-all">
               <Home className="w-4 h-4" />
             </button>
           </div>
@@ -757,6 +759,45 @@ export default function GameBoard() {
             <button onClick={() => setBikeDetails(null)} className="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-slate-800 border border-slate-600 text-white flex items-center justify-center z-10 shadow-lg">✕</button>
             <div className="transform scale-105">
               <BikeCard bike={bikeDetails} size="large" showDetails={true} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Confirm Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-red-500/30 rounded-xl p-6 w-full max-w-sm shadow-2xl animate-in scale-in duration-200">
+            <h2 className="text-xl font-bold text-white mb-4 text-center">ゲームを終了しますか？</h2>
+            <p className="text-slate-300 text-sm text-center mb-6 leading-relaxed">
+              ゲームを終了すると、現在プレイ中のデータは失われます。よろしいですか？
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={async () => {
+                  setShowExitConfirm(false);
+                  if (gameId) {
+                    try {
+                      await terminateMutation.mutateAsync({ gameId });
+                    } catch (error) {
+                      console.error("Failed to terminate game:", error);
+                    }
+                  }
+                  clearToasts();
+                  setLocation("/");
+                }}
+                disabled={terminateMutation.isPending}
+                className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-lg"
+              >
+                {terminateMutation.isPending ? "終了中..." : "終了する"}
+              </Button>
+              <Button
+                onClick={() => setShowExitConfirm(false)}
+                variant="outline"
+                className="flex-1 h-12 text-base font-semibold border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-300"
+              >
+                続ける
+              </Button>
             </div>
           </div>
         </div>
