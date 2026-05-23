@@ -414,8 +414,50 @@ export default function GameBoard() {
                         {gameState.game.declaredDirection === 'up' ? '高い順' : '低い順'}
                       </span>
                     </div>
+
+                    {/* 山札残り枚数の表示 */}
+                    <div className="mt-3 pt-3 border-t border-cyan-500/10 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {/* 重なったカードビジュアル */}
+                        <div className="relative w-10 h-10 flex items-center justify-center mr-2">
+                          {[0, 1, 2].map((idx) => (
+                            <div
+                              key={idx}
+                              className="absolute w-6 h-8 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 border border-cyan-400/30 rounded shadow-md"
+                              style={{
+                                left: `${idx * 4}px`,
+                                top: `${idx * 2}px`,
+                                zIndex: 3 - idx,
+                                opacity: 1 - idx * 0.15,
+                              }}
+                            />
+                          ))}
+                          <div 
+                            className="absolute w-6 h-8 flex items-center justify-center z-10 text-[10px] font-black text-cyan-300"
+                            style={{ left: "8px", top: "4px" }}
+                          >
+                            {(gameState.deckCounts?.large || 0) + (gameState.deckCounts?.medium || 0) + (gameState.deckCounts?.small || 0)}
+                          </div>
+                        </div>
+                        
+                        {/* カテゴリ別の残り枚数 */}
+                        <div className="flex gap-1.5 text-[10px] font-bold">
+                          <span className="flex items-center bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">
+                            大: {gameState.deckCounts?.large || 0}
+                          </span>
+                          <span className="flex items-center bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20">
+                            中: {gameState.deckCounts?.medium || 0}
+                          </span>
+                          <span className="flex items-center bg-pink-500/10 text-pink-400 px-2 py-0.5 rounded border border-pink-500/20">
+                            小: {gameState.deckCounts?.small || 0}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">山札の残り</span>
+                    </div>
+
                     {gameState.game.currentBind && (
-                      <div className="mt-4 inline-flex items-center gap-1.5 bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full border border-pink-500/30 w-fit">
+                      <div className="mt-3 inline-flex items-center gap-1.5 bg-pink-500/20 text-pink-400 px-3 py-1 rounded-full border border-pink-500/30 w-fit">
                         <span className="text-[9px] font-black uppercase tracking-wider">BIND</span>
                         <span className="text-xs font-bold">{specLabels[gameState.game.currentBind]}: {gameState.game.bindValue}</span>
                       </div>

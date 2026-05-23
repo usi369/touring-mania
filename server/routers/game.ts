@@ -169,7 +169,20 @@ export const gameRouter = router({
           };
         });
 
-        return { game, players, bikes: bikeRecords, fieldCards: formattedFieldCards };
+        const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+        const deckCounts = {
+          large: 0,
+          medium: 0,
+          small: 0
+        };
+        gameDecks.forEach((d: any) => {
+          const ids = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
+          if (d.category === 'large' || d.category === 'medium' || d.category === 'small') {
+            deckCounts[d.category as 'large' | 'medium' | 'small'] = ids.length;
+          }
+        });
+
+        return { game, players, bikes: bikeRecords, fieldCards: formattedFieldCards, deckCounts };
       } catch (error) {
         console.error("Error getting game state:", error);
         throw error;
