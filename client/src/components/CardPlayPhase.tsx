@@ -98,8 +98,12 @@ export default function CardPlayPhase({
     }
 
     // 場にカードがある場合、以上・以下のチェック
-    if (fieldCards.length > 0) {
-      const lastPlayedRecord = fieldCards[0];
+    // 現在のトリックのアクティブな場札を取得
+    const activeFieldCards = fieldCards.filter((fc: any) => fc.playerId >= 0);
+    
+    // 場にアクティブなカードがある場合、以上・以下のチェック
+    if (activeFieldCards.length > 0) {
+      const lastPlayedRecord = activeFieldCards[0];
       const lastBike = lastPlayedRecord.bikes?.[lastPlayedRecord.bikes.length - 1];
       if (lastBike) {
         const previousValue = lastBike[declaredSpec];
@@ -157,11 +161,20 @@ export default function CardPlayPhase({
     }
   };
 
+  const hasActiveCards = fieldCards.some((fc: any) => fc.playerId >= 0);
+
   return (
     <div className="w-full h-full flex flex-col gap-3">
       {/* Field Cards - Cards on the table */}
       <div className="bg-slate-800/30 border-2 border-dashed border-amber-500/40 rounded-lg p-3 sm:p-4 mb-2">
-        <p className="text-xs text-amber-400 mb-2">場の履歴（左が最新）</p>
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-xs text-amber-400">場の履歴（左が最新）</p>
+          {!hasActiveCards && (
+            <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/30">
+              場が流れています（自由に出せます）
+            </span>
+          )}
+        </div>
         
         {fieldCards.length > 0 ? (
           <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-6 pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -169,14 +182,16 @@ export default function CardPlayPhase({
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
               
+              const absPlayerId = Math.abs(fc.playerId === -100 ? 0 : fc.playerId);
+              const isCleared = fc.playerId < 0;
               const isLatestRecord = recordIdx === 0;
-              const playerLabel = fc.playerId === 0 ? '山札' : fc.playerId === 1 ? 'You' : `P${fc.playerId}`;
+              const playerLabel = absPlayerId === 0 ? '山札' : absPlayerId === 1 ? 'You' : `P${absPlayerId}`;
               
               // 複数枚出された場合も最新（最後に選択されたもの）を左にするためreverse
               return bikes.slice().reverse().map((bike: any, bikeIdx: number) => {
-                const isLatestCard = isLatestRecord && bikeIdx === 0;
-                const isCPU = fc.playerId !== 1 && fc.playerId !== 0;
-                const isPlayer = fc.playerId === 1;
+                const isLatestCard = isLatestRecord && bikeIdx === 0 && !isCleared;
+                const isCPU = absPlayerId !== 1 && absPlayerId !== 0;
+                const isPlayer = absPlayerId === 1;
                 
                 if (isLatestCard) {
                   return (
@@ -209,8 +224,8 @@ export default function CardPlayPhase({
                       </div>
                       <div className="absolute top-2 right-2 z-20">
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                          fc.playerId === 0 ? 'bg-amber-500/80 text-white' : 
-                          fc.playerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
+                          absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
+                          absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
                         }`}>{playerLabel}</span>
                       </div>
                       <BikeCard 
@@ -225,12 +240,14 @@ export default function CardPlayPhase({
                 return (
                   <div
                     key={`${fc.id}-${bike.id}-${bikeIdx}`}
-                    className="flex-shrink-0 transition-all duration-300 snap-center relative opacity-60 scale-95 hover:opacity-100"
+                    className={`flex-shrink-0 transition-all duration-300 snap-center relative ${
+                      isCleared ? 'opacity-35 scale-90 grayscale' : 'opacity-60 scale-95 hover:opacity-100'
+                    }`}
                   >
                     <div className="absolute top-2 right-2 z-20">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                        fc.playerId === 0 ? 'bg-amber-500/80 text-white' : 
-                        fc.playerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
+                        absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
+                        absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
                       }`}>{playerLabel}</span>
                     </div>
                     <BikeCard 

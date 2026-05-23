@@ -353,7 +353,10 @@ export const gameRouter = router({
             const lastPlayedCard = await db
               .select({ playerId: playedCards.playerId })
               .from(playedCards)
-              .where(eq(playedCards.gameId, input.gameId))
+              .where(and(
+                eq(playedCards.gameId, input.gameId),
+                gt(playedCards.playerId, -1)
+              ))
               .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
               .limit(1);
             if (lastPlayedCard.length > 0) {
@@ -365,8 +368,16 @@ export const gameRouter = router({
 
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-          // 場の履歴を流すためplayedCardsを削除する
-          await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
+          // 場の履歴を流すため、アクティブなカードの playerId を負の値に更新する（0 は -100 に変更）
+          await db
+            .update(playedCards)
+            .set({
+              playerId: sql`CASE WHEN playerId = 0 THEN -100 ELSE -playerId END`
+            })
+            .where(and(
+              eq(playedCards.gameId, input.gameId),
+              gt(playedCards.playerId, -1)
+            ));
 
           await db.update(games).set({ 
             currentBind: null, 
@@ -475,7 +486,15 @@ export const gameRouter = router({
         }
 
         const handBikes = await db.select().from(bikes).where(inArray(bikes.id, handIds));
-        const lastPlayed = await db.select().from(playedCards).where(eq(playedCards.gameId, input.gameId)).orderBy(desc(playedCards.playedAt), desc(playedCards.id)).limit(1);
+        const lastPlayed = await db
+          .select()
+          .from(playedCards)
+          .where(and(
+            eq(playedCards.gameId, input.gameId),
+            gt(playedCards.playerId, -1)
+          ))
+          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+          .limit(1);
         let lastBikes: any[] = [];
         if (lastPlayed.length > 0) {
           const lastIds = JSON.parse(lastPlayed[0].bikeIds);
@@ -559,7 +578,10 @@ export const gameRouter = router({
                const lastPlayedCard = await db
                  .select({ playerId: playedCards.playerId })
                  .from(playedCards)
-                 .where(eq(playedCards.gameId, input.gameId))
+                 .where(and(
+                   eq(playedCards.gameId, input.gameId),
+                   gt(playedCards.playerId, -1)
+                 ))
                  .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
                  .limit(1);
                if (lastPlayedCard.length > 0) {
@@ -571,8 +593,16 @@ export const gameRouter = router({
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-             // 場の履歴を流すためplayedCardsを削除する
-             await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
+             // 場の履歴を流すため、アクティブなカードの playerId を負の値に更新する（0 は -100 に変更）
+             await db
+               .update(playedCards)
+               .set({
+                 playerId: sql`CASE WHEN playerId = 0 THEN -100 ELSE -playerId END`
+               })
+               .where(and(
+                 eq(playedCards.gameId, input.gameId),
+                 gt(playedCards.playerId, -1)
+               ));
 
              await db.update(games).set({ 
                currentBind: null,
