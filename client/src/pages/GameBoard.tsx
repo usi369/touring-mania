@@ -129,14 +129,6 @@ export default function GameBoard() {
     }
     setGameId(id);
 
-    // URLから new=true パラメータを削除し、リロード時にサイコロフェーズから誤って再開するのを防ぎます
-    if (params.get("new") === "true") {
-      params.delete("new");
-      const newSearch = params.toString();
-      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
-      window.history.replaceState(null, "", newUrl);
-    }
-
     return () => clearToasts();
   }, [setLocation, clearToasts]);
 
@@ -172,6 +164,15 @@ export default function GameBoard() {
             if (hasDeclared) setGamePhase('playing');
             else setGamePhase('declaration');
           }
+        }
+      } else if (isInitialLoad && isNewGame) {
+        // 新規ゲームの初期ロード完了後に、URLから new=true を安全に削除する
+        const cleanParams = new URLSearchParams(window.location.search);
+        if (cleanParams.get("new") === "true") {
+          cleanParams.delete("new");
+          const newSearch = cleanParams.toString();
+          const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+          window.history.replaceState(null, "", newUrl);
         }
       }
     }
