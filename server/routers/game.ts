@@ -514,8 +514,22 @@ export const gameRouter = router({
            
            if (passedCount >= game.playerCount - 1) {
              trickCleared = true;
-             const winnerState = allStates.find((s: any) => s.passed === 0);
-             nextPlayer = winnerState ? winnerState.playerId : cpuPlayerId;
+             const winnerState = allStates.find((s: any) => Number(s.playerId) !== Number(cpuPlayerId) && s.passed === 0);
+             if (winnerState) {
+               nextPlayer = winnerState.playerId;
+             } else {
+               const lastPlayedCard = await db
+                 .select({ playerId: playedCards.playerId })
+                 .from(playedCards)
+                 .where(eq(playedCards.gameId, input.gameId))
+                 .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+                 .limit(1);
+               if (lastPlayedCard.length > 0) {
+                 nextPlayer = lastPlayedCard[0].playerId;
+               } else {
+                 nextPlayer = cpuPlayerId === 1 ? 2 : 1;
+               }
+             }
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
@@ -611,6 +625,24 @@ export const gameRouter = router({
         return { activeGameId: activeGames[0].id };
       } catch (error) {
         console.error("Error getting active game:", error);
+        throw error;
+      }
+    }),
+
+  /**
+   * Terminate active game for user (set status to finished)
+   */
+  terminate: publicProcedure
+    .input(z.object({ gameId: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
+        return { success: true };
+      } catch (error) {
+        console.error("Error terminating game:", error);
         throw error;
       }
     }),

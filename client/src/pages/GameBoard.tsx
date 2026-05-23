@@ -192,15 +192,16 @@ export default function GameBoard() {
   }, [gameState?.players, gameState?.bikes]);
 
   useEffect(() => {
-    if (gamePhase === 'playing' && gameState && !gameState.game.declaredSpec) {
+    if (gamePhase === 'playing' && gameState && gameState.game.status === 'playing' && !gameState.game.declaredSpec) {
       const declPlayer = gameState.game.declarationPlayer || 1;
       if (declPlayer !== 1) handleCPUDeclaration();
       else setGamePhase('declaration');
     }
-  }, [gameState?.game.declaredSpec, gamePhase]);
+  }, [gameState?.game.declaredSpec, gameState?.game.status, gamePhase]);
 
   useEffect(() => {
     if (gamePhase !== 'playing' || !gameId || !gameState || cpuProcessing) return;
+    if (!gameState.game.declaredSpec) return; // スペック宣言が行われていない場合はCPUのターンを実行しない
     const currentTurn = gameState.game.currentTurn;
     if (!currentTurn || currentTurn === 1) return;
 
@@ -284,6 +285,8 @@ export default function GameBoard() {
   };
 
   const handleCPUDeclaration = async () => {
+    if (getStateQuery.data?.game?.status === 'finished' || gameState?.game?.status === 'finished') return;
+
     const specs = ['horsepower', 'fuelEfficiency', 'seatHeight', 'totalLength', 'weight', 'price', 'year'] as const;
     const directions = ['up', 'down'] as const;
     const latestGame = getStateQuery.data?.game;
@@ -304,11 +307,16 @@ export default function GameBoard() {
     // 「考え中」フェーズ
     setCpuDeclarationAnim({ phase: 'thinking', playerId: cpuPlayerId });
     await new Promise(resolve => setTimeout(resolve, 2000));
+    if (gameState?.game?.status === 'finished' || getStateQuery.data?.game?.status === 'finished') {
+      setCpuDeclarationAnim(null);
+      return;
+    }
 
     // 「宣言！」フェーズ
     setCpuDeclarationAnim({ phase: 'announcing', playerId: cpuPlayerId, spec: chosen.spec, direction: chosen.direction });
     await new Promise(resolve => setTimeout(resolve, 2200));
     setCpuDeclarationAnim(null);
+    if (gameState?.game?.status === 'finished' || getStateQuery.data?.game?.status === 'finished') return;
 
     addLog(`Player ${cpuPlayerId} 宣言：${specLabels[chosen.spec]}が${dirLabel}`, 'info');
     await handleDeclaration(chosen.spec, chosen.direction);

@@ -593,6 +593,12 @@ export async function validateCardPlay(gameId: number, playerId: number, bikeIds
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  const game = await getGameById(gameId);
+  if (!game) throw new Error("Game not found");
+  if (!game.declaredSpec || !game.declaredDirection) {
+    throw new Error("No active spec declaration for this turn");
+  }
+
   const gameState = await db
     .select()
     .from(gameStates)

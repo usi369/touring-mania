@@ -49,6 +49,11 @@ export function decideCPUAction(
   currentBind?: string,
   bindValue?: string
 ): CPUDecision {
+  if (!declaredSpec || !declaredDirection) {
+    console.warn("[CPU] decideCPUAction: declaredSpec or declaredDirection is missing, passing turn.");
+    return { action: 'pass' };
+  }
+
   // Filter valid cards based on current bind
   let validCards = hand;
   
