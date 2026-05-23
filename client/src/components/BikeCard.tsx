@@ -105,9 +105,14 @@ export default function BikeCard({
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0">
               {bike.maker}
             </p>
-            <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
-              {bike.name}
-            </h3>
+            <div className={`
+              flex flex-col justify-center
+              ${isPokerRatio ? 'min-h-[44px]' : (size === 'large' ? 'min-h-[66px]' : 'min-h-[54px]')}
+            `}>
+              <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
+                {bike.name}
+              </h3>
+            </div>
           </div>
 
           {size !== "small" && (
