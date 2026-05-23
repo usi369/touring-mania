@@ -48,6 +48,7 @@ export default function GameBoard() {
   const [loading, setLoading] = useState(true);
   const [gameId, setGameId] = useState<number | null>(null);
   const [gamePhase, setGamePhase] = useState<GamePhase>('dice');
+  const [showDeclarationModal, setShowDeclarationModal] = useState(false);
   const [diceRolls, setDiceRolls] = useState<Record<number, number> | null>(null);
   const [turnOrder, setTurnOrder] = useState<number[] | null>(null);
   const [bikeDetails, setBikeDetails] = useState<any>(null);
@@ -311,12 +312,31 @@ export default function GameBoard() {
   };
 
   const handleHandReviewComplete = () => {
-    const declPlayer = gameState?.game?.declarationPlayer || 1;
-    if (declPlayer !== 1) handleCPUDeclaration();
-    else setGamePhase('declaration');
+    setGamePhase('declaration');
   };
 
+  // 宣言フェーズのモーダル・CPU思考開始のタイミングを遅延させるエフェクト
+  useEffect(() => {
+    if (gamePhase === 'declaration') {
+      setShowDeclarationModal(false);
+      const declPlayer = gameState?.game?.declarationPlayer || 1;
+      
+      const timer = setTimeout(() => {
+        if (declPlayer === 1) {
+          setShowDeclarationModal(true);
+        } else {
+          handleCPUDeclaration();
+        }
+      }, 1200); // 1.2秒のディレイ（カードの着地演出完了後）
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowDeclarationModal(false);
+    }
+  }, [gamePhase, gameState?.game?.declarationPlayer]);
+
   const handleCPUDeclaration = async () => {
+    if (cpuDeclarationAnim) return; // 二重実行防止
     if (getStateQuery.data?.game?.status === 'finished' || gameState?.game?.status === 'finished') return;
 
     const specs = ['horsepower', 'fuelEfficiency', 'seatHeight', 'totalLength', 'weight', 'price', 'year'] as const;
@@ -588,7 +608,7 @@ export default function GameBoard() {
       )}
 
       {/* Declaration Overlay */}
-      {gamePhase === 'declaration' && (
+      {gamePhase === 'declaration' && showDeclarationModal && (
         <DeclarationPhase
           playerName={gameState.game.declarationPlayer === 1 ? "You" : `Player ${gameState.game.declarationPlayer}`}
           hand={playerHand || []}
