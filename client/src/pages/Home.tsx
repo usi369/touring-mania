@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import RulesScreen from "@/components/RulesScreen";
-import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut } from "lucide-react";
+import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut, Warehouse } from "lucide-react";
 
 /**
  * Touring Mania - Title Screen
@@ -260,6 +260,16 @@ export default function Home() {
         >
           <User className="w-4 h-4 mr-2" />
           {createGuestSessionMutation.isPending ? "準備中..." : "ゲストでプレイ"}
+        </Button>
+
+        {/* My Garage Button */}
+        <Button
+          onClick={() => setLocation("/my-garage")}
+          variant="outline"
+          className="w-full h-12 text-base font-semibold border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/20 hover:text-cyan-300 transition-all duration-300"
+        >
+          <Warehouse className="w-4 h-4 mr-2" />
+          マイガレージ
         </Button>
 
         {/* Encyclopedia Button */}

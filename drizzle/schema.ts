@@ -166,3 +166,17 @@ export const otps = sqliteTable("otps", {
 
 export type Otp = typeof otps.$inferSelect;
 export type InsertOtp = typeof otps.$inferInsert;
+
+/**
+ * UserGarage table - Stores favorite bike (my bike) for each user
+ */
+export const userGarage = sqliteTable("userGarage", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull().unique(),
+  bikeId: integer("bikeId").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
+});
+
+export type UserGarage = typeof userGarage.$inferSelect;
+export type InsertUserGarage = typeof userGarage.$inferInsert;

@@ -6,6 +6,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { gameRouter } from "./routers/game";
 import { guestRouter } from "./routers/guest";
 import { authRouter } from "./routers/auth";
+import { garageRouter } from "./routers/garage";
 import { getDb } from "./db";
 import { likes } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -16,6 +17,7 @@ export const appRouter = router({
   auth: authRouter,
   game: gameRouter,
   guest: guestRouter,
+  garage: garageRouter,
   bike: router({
     list: publicProcedure.query(async () => {
       const { listBikesWithAutoSeed } = await import('./db');

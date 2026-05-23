@@ -1,5 +1,5 @@
 import { eq, and, desc, inArray, gt } from "drizzle-orm";
-import { InsertUser, users, bikes, games, gameStates, playedCards, roundHistory, decks, likes, otps } from "../drizzle/schema";
+import { InsertUser, users, bikes, games, gameStates, playedCards, roundHistory, decks, likes, otps, userGarage, InsertUserGarage } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: any = null;
@@ -1046,5 +1046,47 @@ export async function seedBikesInternal() {
     console.error("[Seed] Internal seeding failed:", error);
     throw error;
   }
+}
+
+/**
+ * Get user garage (favorite bike)
+ */
+export async function getUserGarage(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select()
+    .from(userGarage)
+    .where(eq(userGarage.userId, userId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+/**
+ * Update or set user favorite bike in garage
+ */
+export async function updateUserGarage(userId: number, bikeId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getUserGarage(userId);
+
+  if (existing) {
+    await db
+      .update(userGarage)
+      .set({ bikeId, updatedAt: new Date() })
+      .where(eq(userGarage.userId, userId));
+  } else {
+    await db
+      .insert(userGarage)
+      .values({
+        userId,
+        bikeId,
+      });
+  }
+
+  return getUserGarage(userId);
 }
 
