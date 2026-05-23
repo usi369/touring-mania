@@ -108,6 +108,7 @@ export default function GameBoard() {
   const terminateMutation = trpc.game.terminate.useMutation();
   const utils = trpc.useUtils();
   const [cpuProcessing, setCpuProcessing] = useState(false);
+  const cpuProcessingRef = useRef(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   const fetchBikes = async (bikeIds: number[]) => {
@@ -201,16 +202,30 @@ export default function GameBoard() {
   }, [gameState?.game.declaredSpec, gameState?.game.status, gamePhase]);
 
   useEffect(() => {
-    if (gamePhase !== 'playing' || !gameId || !gameState || cpuProcessing) return;
+    if (gamePhase !== 'playing' || !gameId || !gameState || cpuProcessing || cpuProcessingRef.current) return;
     if (!gameState.game.declaredSpec) return; // スペック宣言が行われていない場合はCPUのターンを実行しない
     const currentTurn = gameState.game.currentTurn;
     if (!currentTurn || currentTurn === 1) return;
 
+    let active = true;
+
     const executeCPUTurn = async () => {
+      cpuProcessingRef.current = true;
       setCpuProcessing(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            if (active) resolve(null);
+            else reject(new Error("Cancelled"));
+          }, 1500);
+        });
+        
+        if (!active) return;
+        
         const result = await cpuPlayMutation.mutateAsync({ gameId });
+        
+        if (!active) return;
+
         if (result.action === 'play') {
           const playedBikes = result.bikeIds
             ? result.bikeIds.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean)
@@ -223,7 +238,13 @@ export default function GameBoard() {
             const label = bindLabels[result.bindDeclare.type] || result.bindDeclare.type;
             // 縛り宣言アニメーションをカード演出の前に表示
             setCpuBindAnim({ playerId: result.cpuPlayerId, bindType: label, bindValue: result.bindDeclare.value });
-            await new Promise(resolve => setTimeout(resolve, 2500));
+            await new Promise((resolve, reject) => {
+              const timer = setTimeout(() => {
+                if (active) resolve(null);
+                else reject(new Error("Cancelled"));
+              }, 2500);
+            });
+            if (!active) return;
             setCpuBindAnim(null);
             addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
           }
@@ -237,14 +258,24 @@ export default function GameBoard() {
           setGameResult({ winnerId: result.winner, winnerName: `Player ${result.winner}` });
           setGamePhase('finished');
         }
+        
         await getStateQuery.refetch();
-      } catch (error) {
-        console.error('CPU play error:', error);
+      } catch (error: any) {
+        if (error?.message !== "Cancelled") {
+          console.error('CPU play error:', error);
+        }
       } finally {
-        setCpuProcessing(false);
+        if (active) {
+          cpuProcessingRef.current = false;
+          setCpuProcessing(false);
+        }
       }
     };
     executeCPUTurn();
+
+    return () => {
+      active = false;
+    };
   }, [gamePhase, gameState?.game?.currentTurn, gameId, cpuProcessing]);
 
   const handleDiceRollComplete = async (rolls: Record<number, number>, order: number[], declarationPlayer: number) => {

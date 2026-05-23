@@ -302,7 +302,16 @@ export const gameRouter = router({
 
         // Next player
         const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-        const nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
+        let nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
+        
+        // Skip passed players
+        const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
+        let safety = 0;
+        while (allStates.find((s: any) => s.playerId === nextPlayer)?.passed === 1 && safety < game.playerCount) {
+          nextPlayer = getNextPlayer(nextPlayer, game.playerCount, turnOrder);
+          safety++;
+        }
+        
         await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
 
         await checkGameIntegrity(db, input.gameId, 'PLAY_AFTER');
@@ -337,11 +346,27 @@ export const gameRouter = router({
 
         if (activePlayers.length <= 1) {
           trickCleared = true;
-          nextPlayer = activePlayers.length === 1 ? activePlayers[0].playerId : 1;
+          if (activePlayers.length === 1) {
+            nextPlayer = activePlayers[0].playerId;
+          } else {
+            // 全員がパスした場合、最後にカードをプレイした人が勝者（親）になる
+            const lastPlayedCard = await db
+              .select({ playerId: playedCards.playerId })
+              .from(playedCards)
+              .where(eq(playedCards.gameId, input.gameId))
+              .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+              .limit(1);
+            if (lastPlayedCard.length > 0) {
+              nextPlayer = lastPlayedCard[0].playerId;
+            } else {
+              nextPlayer = 1;
+            }
+          }
 
           await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-          // 場の履歴は削除せず全て残す（プレイヤーが過去に何が出たか確認できるようにする）
+          // 場の履歴を流すためplayedCardsを削除する
+          await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
 
           await db.update(games).set({ 
             currentBind: null, 
@@ -476,7 +501,7 @@ export const gameRouter = router({
           console.log(`[CPU] P${cpuPlayerId} plays: ${JSON.stringify(decision.bikeIds)}`);
           const updatedHand = handIds.filter((id: number) => !decision.bikeIds!.includes(id));
           console.log(`[CPU] P${cpuPlayerId} hand AFTER play: ${JSON.stringify(updatedHand)}`);
-          await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+          await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
           
           await db.insert(playedCards).values({ 
             gameId: input.gameId, 
@@ -546,7 +571,8 @@ export const gameRouter = router({
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
-             // 場の履歴は削除せず全て残す（プレイヤーが過去に何が出たか確認できるようにする）
+             // 場の履歴を流すためplayedCardsを削除する
+             await db.delete(playedCards).where(eq(playedCards.gameId, input.gameId));
 
              await db.update(games).set({ 
                currentBind: null,
