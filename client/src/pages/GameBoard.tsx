@@ -232,12 +232,25 @@ export default function GameBoard() {
             ? result.bikeIds.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean)
             : [];
           const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
+          
+          // 先に最新状態を取得してカードを場に出す（着地アニメーション開始）
+          await getStateQuery.refetch();
           addLog(`Player ${result.cpuPlayerId} が ${bikeNames || "カード"} を出しました`, 'info');
           
+          // カードが場に着地するのを待つ（1秒）
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              if (active) resolve(null);
+              else reject(new Error("Cancelled"));
+            }, 1000);
+          });
+          if (!active) return;
+
           if (result.bindDeclare) {
             const bindLabels: Record<string, string> = { maker: 'メーカー', cylinders: '気筒数', transmission: 'トランスミッション' };
             const label = bindLabels[result.bindDeclare.type] || result.bindDeclare.type;
-            // 縛り宣言アニメーションをカード演出前表示
+            
+            // 縛りポップアップを表示
             setCpuBindAnim({ playerId: result.cpuPlayerId, bindType: label, bindValue: result.bindDeclare.value });
             await new Promise((resolve, reject) => {
               const timer = setTimeout(() => {
@@ -249,18 +262,21 @@ export default function GameBoard() {
             setCpuBindAnim(null);
             addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
           }
-        } else if (result.action === 'draw') {
-          addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
-        } else if (result.action === 'pass') {
-          addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
+        } else {
+          if (result.action === 'draw') {
+            addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
+          } else if (result.action === 'pass') {
+            addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
+          }
+          // play以外の時は通常通り最新状態を取得
+          await getStateQuery.refetch();
         }
+
         if (result.trickCleared) addLog('場が流れました！', 'success');
         if (result.gameFinished) {
           setGameResult({ winnerId: result.winner, winnerName: `Player ${result.winner}` });
           setGamePhase('finished');
         }
-        
-        await getStateQuery.refetch();
       } catch (error: any) {
         if (error?.message !== "Cancelled") {
           console.error('CPU play error:', error);
