@@ -19,7 +19,7 @@ interface ToastProps {
 
 const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
   useEffect(() => {
-    const duration = message.duration || 10000;
+    const duration = message.duration || 4000;
     const timer = setTimeout(() => {
       onClose(message.id);
     }, duration);
@@ -87,7 +87,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     type: ToastType,
     title: string,
     message?: string,
-    duration: number = 10000
+    duration: number = 4000
   ) => {
     const id = Math.random().toString(36).substr(2, 9);
     const newToast: ToastMessage = { id, type, title, message, duration };
