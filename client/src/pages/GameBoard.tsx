@@ -203,7 +203,7 @@ export default function GameBoard() {
   }, [gameState?.game.declaredSpec, gameState?.game.status, gamePhase]);
 
   useEffect(() => {
-    if (gamePhase !== 'playing' || !gameId || !gameState || cpuProcessing || cpuProcessingRef.current) return;
+    if (gamePhase !== 'playing' || !gameId || !gameState || cpuProcessingRef.current) return;
     if (!gameState.game.declaredSpec) return; // スペック宣言が行われていない場合はCPUのターンを実行しない
     const currentTurn = gameState.game.currentTurn;
     if (!currentTurn || currentTurn === 1) return;
@@ -237,7 +237,7 @@ export default function GameBoard() {
           if (result.bindDeclare) {
             const bindLabels: Record<string, string> = { maker: 'メーカー', cylinders: '気筒数', transmission: 'トランスミッション' };
             const label = bindLabels[result.bindDeclare.type] || result.bindDeclare.type;
-            // 縛り宣言アニメーションをカード演出の前に表示
+            // 縛り宣言アニメーションをカード演出前表示
             setCpuBindAnim({ playerId: result.cpuPlayerId, bindType: label, bindValue: result.bindDeclare.value });
             await new Promise((resolve, reject) => {
               const timer = setTimeout(() => {
@@ -276,8 +276,10 @@ export default function GameBoard() {
 
     return () => {
       active = false;
+      cpuProcessingRef.current = false;
+      setCpuProcessing(false);
     };
-  }, [gamePhase, gameState?.game?.currentTurn, gameId, cpuProcessing]);
+  }, [gamePhase, gameState?.game?.currentTurn, gameId]);
 
   const handleDiceRollComplete = async (rolls: Record<number, number>, order: number[], declarationPlayer: number) => {
     setDiceRolls(rolls);
