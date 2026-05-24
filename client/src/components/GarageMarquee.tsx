@@ -1,60 +1,86 @@
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface GarageMarqueeProps {
   bikes: any[];
 }
 
+interface BikeItem {
+  id: number;
+  photoUrl: string;
+  name: string;
+  x: number;      // コンテナに対するX座標パーセンテージ (-25% から 125%)
+  y: number;      // 縦位置の微調整 (px)
+  speed: number;  // 1フレームあたりの移動速度パーセンテージ
+}
+
 export default function GarageMarquee({ bikes }: GarageMarqueeProps) {
   if (!bikes || bikes.length === 0) return null;
 
-  // 画面上に同時に流すバイクアイテムのステート
-  const [items, setItems] = useState<Array<{
-    key: number;
-    photoUrl: string;
-    name: string;
-    duration: number;
-    delay: number;
-    y: number;
-  }>>([]);
+  const [items, setItems] = useState<BikeItem[]>([]);
+  const bikesRef = useRef(bikes);
+  bikesRef.current = bikes;
 
+  // 初期配置を設定（左から右へ流れるため、X座標を-25から125の間に綺麗に分散）
   useEffect(() => {
-    // 最初のアイテムを生成
-    // 重なりを防ぐため、初期ディレイを適度にズラして設定します
     const initialItems = Array.from({ length: 4 }).map((_, idx) => {
       const randomBike = bikes[Math.floor(Math.random() * bikes.length)];
       return {
-        key: idx,
+        id: idx,
         photoUrl: randomBike.photoUrl || "https://placehold.co/400x300/1e293b/64748b?text=No+Image",
         name: randomBike.name,
-        duration: 6 + Math.random() * 5, // 6秒〜11秒の間でランダムな移動速度
-        delay: idx * 2.0, // 各バイクの登場タイミングをずらす
-        y: Math.random() * 16 - 8, // 上下位置に若干の揺らぎを与える
+        x: -25 + idx * 37.5, // -25%, 12.5%, 50%, 87.5% に均等分散して重なりを防止
+        y: Math.random() * 16 - 8,
+        speed: 0.08 + Math.random() * 0.08, // 毎フレームの移動パーセンテージ (速度のランダム化)
       };
     });
     setItems(initialItems);
   }, [bikes]);
 
-  // バイクが左端に流れて消え去ったタイミングで、新しいバイク画像とランダム速度で再生成して右端に戻す
-  const handleComplete = (idx: number) => {
-    setItems((prev) =>
-      prev.map((item, i) => {
-        if (i === idx) {
-          const randomBike = bikes[Math.floor(Math.random() * bikes.length)];
+  // アニメーションループ（requestAnimationFrameによる60FPS制御）
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const updatePosition = () => {
+      setItems((prevItems) => {
+        return prevItems.map((item) => {
+          let nextX = item.x + item.speed;
+          let nextPhotoUrl = item.photoUrl;
+          let nextName = item.name;
+          let nextSpeed = item.speed;
+          let nextY = item.y;
+
+          // 右端（125%）まで到達して画面外へ抜け切ったら、左端（-25%）へ戻す
+          if (nextX >= 125) {
+            nextX = -25;
+            const currentBikes = bikesRef.current;
+            if (currentBikes && currentBikes.length > 0) {
+              // ワープしたタイミングで新しいランダムなバイク画像に切り替え
+              const randomBike = currentBikes[Math.floor(Math.random() * currentBikes.length)];
+              nextPhotoUrl = randomBike.photoUrl || "https://placehold.co/400x300/1e293b/64748b?text=No+Image";
+              nextName = randomBike.name;
+            }
+            // 新しい移動速度とY座標（縦のブレ）をランダムに設定
+            nextSpeed = 0.08 + Math.random() * 0.08;
+            nextY = Math.random() * 16 - 8;
+          }
+
           return {
             ...item,
-            key: Date.now() + i, // キー値を更新してコンポーネントを再マウントさせ、アニメーションを再実行
-            photoUrl: randomBike.photoUrl || "https://placehold.co/400x300/1e293b/64748b?text=No+Image",
-            name: randomBike.name,
-            duration: 6 + Math.random() * 5,
-            delay: 0, // 既に待機が開始しているため、再登場時の追加ディレイは不要
-            y: Math.random() * 16 - 8,
+            x: nextX,
+            photoUrl: nextPhotoUrl,
+            name: nextName,
+            speed: nextSpeed,
+            y: nextY,
           };
-        }
-        return item;
-      })
-    );
-  };
+        });
+      });
+
+      animationFrameId = requestAnimationFrame(updatePosition);
+    };
+
+    animationFrameId = requestAnimationFrame(updatePosition);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
 
   return (
     <div className="w-full bg-gradient-to-r from-slate-950 via-slate-900/90 to-slate-950 border border-slate-800 rounded-xl h-24 relative overflow-hidden flex items-center shadow-inner mt-4">
@@ -70,18 +96,14 @@ export default function GarageMarquee({ bikes }: GarageMarqueeProps) {
 
       {/* バイクが流れるレール */}
       <div className="relative w-full h-full overflow-hidden">
-        {items.map((item, idx) => (
-          <motion.div
-            key={item.key}
-            initial={{ x: "115%", y: `calc(50% - 32px + ${item.y}px)` }}
-            animate={{ x: "-115%" }}
-            transition={{
-              duration: item.duration,
-              delay: item.delay,
-              ease: "linear",
+        {items.map((item) => (
+          <div
+            key={item.id}
+            style={{
+              transform: `translate3d(${item.x}%, calc(50% - 32px + ${item.y}px), 0)`,
+              willChange: "transform",
             }}
-            onAnimationComplete={() => handleComplete(idx)}
-            className="absolute left-0 w-16 h-16 bg-slate-950/80 border border-cyan-500/20 rounded-lg p-1 shadow-[0_0_10px_rgba(34,211,238,0.1)] flex items-center justify-center"
+            className="absolute left-0 w-16 h-16 bg-slate-950/80 border border-cyan-500/20 rounded-lg p-1 shadow-[0_0_10px_rgba(34,211,238,0.1)] flex items-center justify-center transition-none"
           >
             <img
               src={item.photoUrl}
@@ -92,7 +114,7 @@ export default function GarageMarquee({ bikes }: GarageMarqueeProps) {
                   "https://placehold.co/400x300/1e293b/64748b?text=No+Image";
               }}
             />
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
