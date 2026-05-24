@@ -86,7 +86,11 @@ export default function GameLog({ logs, isOpen, unreadCount, onClose, onToggle }
         </div>
 
         {/* Content */}
-        <ScrollArea ref={scrollRef} className="flex-1">
+        <ScrollArea 
+          ref={scrollRef} 
+          type="always" 
+          className="flex-1 h-0 [&_[data-slot=scroll-area-thumb]]:bg-slate-600 hover:[&_[data-slot=scroll-area-thumb]]:bg-cyan-500 transition-colors"
+        >
           <div className="space-y-4 p-4 pb-12">
             {logs.length === 0 ? (
               <div className="py-20 flex flex-col items-center justify-center opacity-30">
