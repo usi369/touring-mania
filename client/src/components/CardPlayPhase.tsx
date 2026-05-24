@@ -222,7 +222,7 @@ export default function CardPlayPhase({
         </div>
         
         {fieldCards.length > 0 ? (
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-6 pb-4 snap-x snap-mandatory -mx-1 px-4 items-center" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-10 pb-8 snap-x snap-mandatory -mx-1 px-4 items-center min-h-[480px]" style={{ WebkitOverflowScrolling: 'touch' }}>
             {fieldCards.map((fc: any, recordIdx: number) => {
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
@@ -270,10 +270,10 @@ export default function CardPlayPhase({
                           現在の基準
                         </div>
                       )}
-                      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                          absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
-                          absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md border border-white/10 ${
+                          absPlayerId === 0 ? 'bg-amber-500 text-slate-950' : 
+                          absPlayerId === 1 ? 'bg-green-500 text-white' : 'bg-slate-700 text-white'
                         }`}>{playerLabel}</span>
                       </div>
                       <BikeCard 
@@ -290,10 +290,10 @@ export default function CardPlayPhase({
                     key={`${fc.id}-${bike.id}-${bikeIdx}`}
                     className="flex-shrink-0 transition-all duration-300 snap-center relative opacity-50 scale-90 grayscale hover:opacity-85"
                   >
-                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                        absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
-                        absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md border border-white/10 ${
+                        absPlayerId === 0 ? 'bg-amber-500 text-slate-950' : 
+                        absPlayerId === 1 ? 'bg-green-500 text-white' : 'bg-slate-700 text-white'
                       }`}>{playerLabel}</span>
                     </div>
                     <BikeCard 
