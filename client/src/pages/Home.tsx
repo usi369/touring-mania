@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import RulesScreen from "@/components/RulesScreen";
 import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut, Warehouse } from "lucide-react";
+import GarageMarquee from "@/components/GarageMarquee";
 
 /**
  * Touring Mania - Title Screen
@@ -503,10 +504,13 @@ export default function Home() {
                       メール送信済
                     </Button>
                   ) : (
-                    <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
-                      <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                      メールの受信を確認しています...
-                    </div>
+                    <>
+                      <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
+                        <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                        メールの受信を確認しています...
+                      </div>
+                      <GarageMarquee bikes={bikesQuery.data || []} />
+                    </>
                   )}
                 </div>
 

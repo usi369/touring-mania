@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, LogOut, Key, Loader2, Sparkles, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import BikeCard from "@/components/BikeCard";
+import GarageMarquee from "@/components/GarageMarquee";
 
 export default function MyGarage() {
   const { isLoaded: isAuthLoaded, user, isAuthenticated, login, logout } = useAuth();
@@ -297,10 +298,13 @@ export default function MyGarage() {
                         メール送信済
                       </Button>
                     ) : (
-                      <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
-                        <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                        オーナーの確認を行っています...
-                      </div>
+                      <>
+                        <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
+                          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                          オーナーの確認を行っています...
+                        </div>
+                        <GarageMarquee bikes={bikesQuery.data || []} />
+                      </>
                     )}
                   </div>
 
