@@ -113,7 +113,7 @@ export default function BikeCard({
               <span className="px-2 pt-1.5 pb-1 bg-pink-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10 leading-none">
                 {bike.transmission}
               </span>
-              <span className="pl-2 pr-3 pt-1.5 pb-1 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10 leading-none">
+              <span className="pl-2 pr-3 pt-1.5 pb-1 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white border-b border-l border-white/10 leading-none">
                 {bike.cylinders}気筒
               </span>
             </div>
