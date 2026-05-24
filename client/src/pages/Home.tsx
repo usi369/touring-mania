@@ -60,6 +60,7 @@ export default function Home() {
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [ignitionState, setIgnitionState] = useState<"off" | "key_inserting" | "key_on" | "cranking" | "igniting" | "engine_on">("off");
+  const [hasClickedSent, setHasClickedSent] = useState(false);
 
   const sendOtpMutation = trpc.auth.sendOtp.useMutation();
 
@@ -86,6 +87,7 @@ export default function Home() {
           setAuthStep("email");
           setGeneratedCode("");
           setIgnitionState("off");
+          setHasClickedSent(false);
 
           // ログイン成功時に進行中のゲームをチェック
           const res = await activeGameQuery.refetch();
@@ -95,7 +97,7 @@ export default function Home() {
             setShowTitleSelect(true);
           }
         });
-      }, 2200); // 2.2s ceremony
+      }, 500); // 儀式を0.5秒に短縮してスムーズに開始
       return () => clearTimeout(timer);
     } else if (pollData && !pollData.verified && (pollData.status === "expired" || pollData.status === "not_found")) {
       if (pollData.status === "expired") {
@@ -103,6 +105,7 @@ export default function Home() {
         setAuthStep("email");
         setGeneratedCode("");
         setIgnitionState("off");
+        setHasClickedSent(false);
       }
     }
   }, [pollData]);
@@ -119,6 +122,7 @@ export default function Home() {
       setAuthStep("email");
       setEmail("");
       setErrorMessage("");
+      setHasClickedSent(false);
     }
   };
 
@@ -128,6 +132,7 @@ export default function Home() {
     setErrorMessage("");
     setGeneratedCode("");
     setIgnitionState("key_inserting");
+    setHasClickedSent(false);
 
     try {
       const res = await sendOtpMutation.mutateAsync({ email });
@@ -387,51 +392,26 @@ export default function Home() {
         </div>
       )}
 
-      {/* Custom Email OTP Modal (Ignition Theme) */}
+      {/* Custom Email OTP Modal */}
       {showEmailModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className={`bg-slate-900/95 border border-cyan-500/30 rounded-2xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-300 ${
-            ignitionState === "igniting" ? "animate-rumble border-green-500/50 shadow-[0_0_50px_rgba(16,185,129,0.3)]" : ""
-          }`}>
-            <h2 className="text-2xl font-black text-white mb-4 text-center uppercase tracking-widest italic">
-              {authStep === "email" ? "IGNITION SYSTEM" : "INSTRUMENT PANEL"}
+          <div className="bg-slate-900/95 border border-cyan-500/30 rounded-2xl p-6 w-full max-w-md shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-300">
+            <h2 className="text-xl font-bold text-white mb-4 text-center tracking-wider">
+              {authStep === "email" ? "ログイン認証" : "メール確認"}
             </h2>
             
             {authStep === "email" ? (
               <form onSubmit={handleSendOtp} className="space-y-6">
                 <p className="text-slate-400 text-xs text-center leading-relaxed">
-                  メールアドレスを入力し、キー（鍵）を差し込んでシステムを起動します。
+                  メールアドレスを入力し、認証用のキーコードを発行してください。
                 </p>
 
-                {/* Keyhole SVG representation */}
-                <div className="py-4">
-                  <svg viewBox="0 0 100 100" className="w-28 h-28 mx-auto drop-shadow-[0_0_15px_rgba(34,211,238,0.2)]">
-                    <circle cx="50" cy="50" r="45" fill="#1e293b" stroke="#334155" strokeWidth="3" />
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#22d3ee" strokeWidth="1" opacity="0.3" strokeDasharray="4 4" />
-                    <text x="50" y="24" textAnchor="middle" fill="#64748b" fontSize="7" fontWeight="black" className="tracking-wider">OFF</text>
-                    <text x="78" y="52" textAnchor="middle" fill="#64748b" fontSize="7" fontWeight="black" className="tracking-wider">ON</text>
-                    <text x="22" y="52" textAnchor="middle" fill="#64748b" fontSize="7" fontWeight="black" className="tracking-wider">LOCK</text>
-                    
-                    <circle cx={ignitionState === "off" || ignitionState === "key_inserting" ? "50" : "71"} cy={ignitionState === "off" || ignitionState === "key_inserting" ? "30" : "50"} r="2" fill="#22d3ee" className="transition-all duration-500" />
-                    
-                    <g transform={`rotate(${ignitionState === "off" || ignitionState === "key_inserting" ? 0 : 90} 50 50)`} className="transition-transform duration-500 ease-in-out">
-                      <circle cx="50" cy="50" r="22" fill="#0f172a" stroke="#475569" strokeWidth="2" />
-                      <rect x="47" y="42" width="6" height="16" rx="1" fill="#334155" />
-                      <circle cx="50" cy="42" r="4" fill="#334155" />
-                      
-                      {(ignitionState !== "off") && (
-                        <g className={`transition-all duration-500 ${ignitionState === "key_inserting" ? "translate-y-[-12px] opacity-30" : "translate-y-0 opacity-100"}`}>
-                          <path d="M44,22 C44,14 56,14 56,22 L53,38 L47,38 Z" fill="url(#key-grad)" stroke="#22d3ee" strokeWidth="1" />
-                          <circle cx="50" cy="18" r="2.5" fill="#0f172a" />
-                        </g>
-                      )}
-                    </g>
-                    <defs>
-                      <linearGradient id="key-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#475569" />
-                        <stop offset="100%" stopColor="#1e293b" />
-                      </linearGradient>
-                    </defs>
+                {/* Keyhole SVG representation (Keep simple for context) */}
+                <div className="py-2">
+                  <svg viewBox="0 0 100 100" className="w-20 h-20 mx-auto drop-shadow-[0_0_10px_rgba(34,211,238,0.15)]">
+                    <circle cx="50" cy="50" r="45" fill="#1e293b" stroke="#334155" strokeWidth="2" />
+                    <path d="M50,20 L50,45" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round" />
+                    <circle cx="50" cy="50" r="8" fill="none" stroke="#22d3ee" strokeWidth="2" />
                   </svg>
                 </div>
 
@@ -463,136 +443,71 @@ export default function Home() {
                       className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold tracking-wider"
                       disabled={isSending}
                     >
-                      {isSending ? "起動中..." : "キーをONにする"}
+                      {isSending ? "処理中..." : "キーコードを発行"}
                     </Button>
                   </div>
                 </div>
               </form>
             ) : (
               <div className="space-y-5">
-                {/* Tachometer Display */}
-                <div className="relative bg-slate-950/60 p-2 rounded-xl border border-slate-800 shadow-inner">
-                  <svg viewBox="0 0 200 110" className="w-full max-w-[240px] mx-auto">
-                    <path d="M30,95 A70,70 0 0,1 170,95" fill="none" stroke="#1e293b" strokeWidth="8" strokeLinecap="round" />
-                    <path d="M30,95 A70,70 0 0,1 170,95" fill="none" stroke="url(#tacho-grad)" strokeWidth="6" strokeLinecap="round" opacity="0.8" />
-                    <path d="M136,44 A70,70 0 0,1 170,95" fill="none" stroke="#f43f5e" strokeWidth="8" strokeLinecap="round" opacity="0.5" />
-                    
-                    {Array.from({ length: 9 }).map((_, idx) => {
-                      const angle = -120 + idx * 30;
-                      const isRedline = idx >= 6;
-                      return (
-                        <line
-                          key={idx}
-                          x1="100"
-                          y1="95"
-                          x2="100"
-                          y2="20"
-                          stroke={isRedline ? "#f43f5e" : "#22d3ee"}
-                          strokeWidth="1.5"
-                          strokeDasharray="6 70"
-                          transform={`rotate(${angle} 100 95)`}
-                          opacity="0.4"
-                        />
-                      );
-                    })}
-                    
-                    <circle cx="100" cy="95" r="10" fill="#0f172a" stroke="#334155" strokeWidth="2" />
-                    
-                    <g transform={`rotate(${
-                      ignitionState === "key_on" ? -85 :
-                      ignitionState === "cranking" ? -82 :
-                      ignitionState === "igniting" ? 110 :
-                      ignitionState === "engine_on" ? -85 : -120
-                    } 100 95)`}
-                       className={`origin-[100px_95px] transition-transform duration-[1200ms] ease-[cubic-bezier(0.25,1,0.5,1)] ${
-                         ignitionState === "cranking" ? "animate-cranking-needle" :
-                         ignitionState === "igniting" ? "animate-tacho-opening" : ""
-                       }`}
-                    >
-                      <line x1="100" y1="95" x2="100" y2="25" stroke="#f43f5e" strokeWidth="2.5" strokeLinecap="round" />
-                    </g>
-                    
-                    <text x="100" y="80" textAnchor="middle" fill="#22d3ee" fontSize="10" fontWeight="black" fontFamily="monospace" opacity="0.8">
-                      {ignitionState === "key_on" ? "0" :
-                       ignitionState === "cranking" ? "1200" :
-                       ignitionState === "igniting" ? "10500" :
-                       ignitionState === "engine_on" ? "1450" : "0"} RPM
-                    </text>
-                    
-                    <defs>
-                      <linearGradient id="tacho-grad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#22d3ee" />
-                        <stop offset="70%" stopColor="#a855f7" />
-                        <stop offset="100%" stopColor="#ef4444" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-
-                {/* Dashboard Indicators */}
-                <div className="flex justify-center gap-6 my-2 bg-slate-950/40 py-2 rounded-xl border border-slate-900">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full border border-slate-800 bg-slate-950 flex items-center justify-center text-[8px] font-black transition-all ${
-                      ignitionState === "key_on" ? "text-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
-                      ignitionState === "cranking" ? "animate-blink-red" : "text-slate-800"
-                    }`}>OIL</div>
+                {/* ログイン認証ヘッダーと説明 */}
+                <div className="text-center space-y-2">
+                  <div className="text-xs text-slate-400">
+                    宛先や本文は変更せず、そのままメールを送信してください。
                   </div>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full border border-slate-800 bg-slate-950 flex items-center justify-center text-[8px] font-black transition-all ${
-                      ignitionState === "key_on" ? "text-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" :
-                      ignitionState === "cranking" ? "animate-blink-orange" : 
-                      ignitionState === "igniting" || ignitionState === "engine_on" ? "text-green-500 shadow-[0_0_10px_#10b981]" : "text-slate-800"
-                    }`}>FI</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full border border-slate-800 bg-slate-950 flex items-center justify-center text-[8px] font-black transition-all ${
-                      ignitionState !== "off" && ignitionState !== "key_inserting" ? "text-green-500 shadow-[0_0_10px_#10b981]" : "text-slate-800"
-                    }`}>N</div>
+                  <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg text-center font-mono">
+                    <span className="text-slate-500 text-[10px] block mb-1">認証コード</span>
+                    <span className="text-xl font-black text-cyan-300 tracking-widest">{generatedCode}</span>
                   </div>
                 </div>
 
-                {/* LCD Display Console */}
-                <div className="relative bg-slate-950 border border-slate-900 p-4 rounded-xl font-mono text-[10px] sm:text-xs overflow-hidden shadow-inner text-cyan-400">
-                  <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent h-1/2 w-full animate-lcd-scan pointer-events-none" />
-                  
-                  <div className="space-y-1.5 z-10 relative">
-                    <div className="flex justify-between border-b border-cyan-950 pb-1 text-[9px] text-cyan-600 font-bold">
-                      <span>SYSTEM MONITOR v1.0.4</span>
-                      <span className={ignitionState === "cranking" ? "text-orange-500 font-black animate-pulse" : ""}>
-                        {ignitionState === "key_on" ? "● SYSTEM READY" :
-                         ignitionState === "cranking" ? "⚡ CRANKING..." :
-                         ignitionState === "igniting" ? "🔥 IGNITING..." :
-                         ignitionState === "engine_on" ? "✔ READY TO RIDE" : "● SYSTEM OFF"}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between pt-1">
-                      <span className="text-slate-500">RIDER:</span>
-                      <span className="text-slate-300 font-bold select-all truncate max-w-[200px]">{email}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">GATEWAY:</span>
-                      <span className="text-slate-300 font-bold select-all">login@nirin-hub.me</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">IGNITION KEY:</span>
-                      <span className="text-cyan-300 font-black select-all tracking-wider">認証コード: {generatedCode}</span>
-                    </div>
+                {/* 手順の案内と「この画面に戻る」旨の強調表示 */}
+                <div className="bg-slate-900 border border-cyan-500/20 p-3.5 rounded-lg text-xs space-y-2.5 leading-relaxed">
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">1</span>
+                    <p className="text-slate-300">
+                      「メールを起動して送信」ボタンを押し、お使いのメールソフトでメールを送信します。
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">2</span>
+                    <p className="text-slate-300">
+                      送信完了後、<span className="text-cyan-300 font-bold">必ずこのブラウザ画面に戻ってきて</span>ください。
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">3</span>
+                    <p className="text-slate-300">
+                      この画面に戻ったら、下部の「メール送信済」ボタンを押してください。
+                    </p>
                   </div>
                 </div>
 
-                {/* Starter Button */}
-                <div className="flex flex-col gap-2">
+                {/* アクションボタン */}
+                <div className="space-y-3">
                   <a
                     href={`mailto:login@nirin-hub.me?subject=認証コード: ${generatedCode}&body=そのまま送信してください。%0D%0A認証コード: ${generatedCode}`}
-                    onClick={() => setIgnitionState("cranking")}
-                    className="w-full h-14 flex items-center justify-center bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 border border-red-800 text-white font-black rounded-xl transition-all shadow-[0_4px_10px_rgba(239,68,68,0.3)] text-center tracking-widest text-base hover:scale-[1.02] active:scale-[0.98]"
+                    onClick={() => {
+                      setIgnitionState("cranking");
+                    }}
+                    className="w-full h-12 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 border border-cyan-700 text-white font-bold rounded-lg transition-all text-center tracking-wider text-sm shadow-[0_2px_8px_rgba(34,211,238,0.2)]"
                   >
-                    🚀 ENGINE START
+                    メールを起動して送信
                   </a>
-                  <p className="text-[10px] text-center text-slate-500 font-bold">
-                    ※送信後、システムが信号を検知して自動点火します
-                  </p>
+
+                  {!hasClickedSent ? (
+                    <Button
+                      onClick={() => setHasClickedSent(true)}
+                      className="w-full h-12 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-lg tracking-wider text-sm transition-all"
+                    >
+                      メール送信済
+                    </Button>
+                  ) : (
+                    <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
+                      <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                      メールの受信を確認しています...
+                    </div>
+                  )}
                 </div>
 
                 {errorMessage && (
@@ -606,6 +521,7 @@ export default function Home() {
                       setAuthStep("email");
                       setGeneratedCode("");
                       setIgnitionState("off");
+                      setHasClickedSent(false);
                     }}
                     variant="ghost"
                     className="w-full text-slate-500 hover:text-white"

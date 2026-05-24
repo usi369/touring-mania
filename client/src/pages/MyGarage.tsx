@@ -34,6 +34,7 @@ export default function MyGarage() {
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [ignitionState, setIgnitionState] = useState<"off" | "key_inserting" | "key_on" | "cranking" | "igniting" | "engine_on">("off");
+  const [hasClickedSent, setHasClickedSent] = useState(false);
 
   const sendOtpMutation = trpc.auth.sendOtp.useMutation();
 
@@ -75,6 +76,7 @@ export default function MyGarage() {
           // Trigger Shutter Opening Ceremony!
           setIsOpening(true);
           setShutterState("opening");
+          setHasClickedSent(false);
           
           setTimeout(() => {
             setShutterState("open");
@@ -86,7 +88,7 @@ export default function MyGarage() {
             garageQuery.refetch();
           }, 3500); // Shutter animation time (3.5 seconds)
         });
-      }, 2000);
+      }, 500); // 儀式を0.5秒に短縮してスムーズに開始
 
       return () => clearTimeout(timer);
     } else if (pollData && !pollData.verified && (pollData.status === "expired" || pollData.status === "not_found")) {
@@ -94,6 +96,7 @@ export default function MyGarage() {
         setErrorMessage("キーコードの有効期限が切れました。再試行してください。");
         setIgnitionState("off");
         setGeneratedCode("");
+        setHasClickedSent(false);
       }
     }
   }, [pollData]);
@@ -105,6 +108,7 @@ export default function MyGarage() {
     setErrorMessage("");
     setGeneratedCode("");
     setIgnitionState("key_inserting");
+    setHasClickedSent(false);
 
     try {
       const res = await sendOtpMutation.mutateAsync({ email });
@@ -210,8 +214,12 @@ export default function MyGarage() {
                 <div className="w-16 h-16 rounded-full border border-cyan-500/30 bg-slate-950/80 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
                   <Key className="w-7 h-7 text-cyan-400 animate-pulse" />
                 </div>
-                <h3 className="text-lg font-black text-white uppercase tracking-widest italic">ガレージ認証システム</h3>
-                <p className="text-xs text-slate-400 mt-2">ガレージのセキュリティロックを解除するため、メールキーを差し込んでください。</p>
+                <h3 className="text-lg font-bold text-white tracking-wider">ガレージオーナー認証</h3>
+                <p className="text-xs text-slate-400 mt-2">
+                  {ignitionState === "off" || ignitionState === "key_inserting"
+                    ? "ガレージのセキュリティロックを解除するため、メールアドレスを入力してください。"
+                    : "宛先や本文は変更せず、そのままメールを送信してください。"}
+                </p>
               </div>
 
               {ignitionState === "off" || ignitionState === "key_inserting" ? (
@@ -238,44 +246,62 @@ export default function MyGarage() {
                     className="w-full h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
                     disabled={isSending}
                   >
-                    {isSending ? "キー接続中..." : "イグニッションキーを挿入"}
+                    {isSending ? "キー接続中..." : "オーナー認証キーを発行"}
                   </Button>
                 </form>
               ) : (
                 <div className="space-y-5">
-                  {/* Digital Instrument Panel */}
-                  <div className="bg-slate-950/90 border border-slate-800 p-4 rounded-xl font-mono text-xs shadow-inner text-cyan-400 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent h-1/2 w-full animate-scan pointer-events-none" />
-                    
-                    <div className="space-y-2 text-center">
-                      <div className="flex justify-between border-b border-cyan-950/60 pb-1.5 text-[10px] text-cyan-600 font-bold">
-                        <span>SYSTEM STATUS MONITOR</span>
-                        <span className={ignitionState === "cranking" ? "text-orange-500 animate-pulse" : "text-green-500"}>
-                          {ignitionState === "key_on" ? "● ID CODE STANDBY" :
-                           ignitionState === "cranking" ? "⚡ ENGINE CRANKING..." : "🔥 IGNITING..."}
-                        </span>
-                      </div>
-                      
-                      <div className="py-2">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Electronic Access Key</p>
-                        <p className="text-lg font-black text-cyan-300 tracking-widest">認証コード: {generatedCode}</p>
-                      </div>
-                      
-                      <p className="text-[10px] text-slate-400 leading-relaxed text-left border-t border-cyan-950/40 pt-2">
-                        以下のスターターボタンを押してメールを送信し、認証コードを送信してください。システムが信号を受信すると自動的に点火・開錠します。
+                  {/* 認証コード */}
+                  <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg text-center font-mono">
+                    <span className="text-slate-500 text-[10px] block mb-1">認証コード</span>
+                    <span className="text-xl font-black text-cyan-300 tracking-widest">{generatedCode}</span>
+                  </div>
+
+                  {/* 手順の案内と「この画面に戻る」旨の強調表示 */}
+                  <div className="bg-slate-900 border border-cyan-500/20 p-3.5 rounded-lg text-xs space-y-2.5 leading-relaxed">
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">1</span>
+                      <p className="text-slate-300">
+                        「メールを起動して送信」ボタンを押し、お使いのメールソフトでメールを送信します。
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">2</span>
+                      <p className="text-slate-300">
+                        送信完了後、<span className="text-cyan-300 font-bold">必ずこのブラウザ画面に戻ってきて</span>ください。
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">3</span>
+                      <p className="text-slate-300">
+                        この画面に戻ったら、下部の「メール送信済」ボタンを押してください。
                       </p>
                     </div>
                   </div>
 
-                  {/* Starer Action Button */}
-                  <div className="flex flex-col gap-2">
+                  {/* アクションボタン */}
+                  <div className="space-y-3">
                     <a
                       href={`mailto:login@nirin-hub.me?subject=認証コード: ${generatedCode}&body=そのまま送信してください。%0D%0A認証コード: ${generatedCode}`}
                       onClick={() => setIgnitionState("cranking")}
-                      className="w-full h-14 flex items-center justify-center bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 border border-red-800 text-white font-black rounded-xl transition-all shadow-[0_4px_15px_rgba(239,68,68,0.4)] text-center tracking-widest text-base hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full h-12 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 border border-cyan-700 text-white font-bold rounded-lg transition-all text-center tracking-wider text-sm shadow-[0_2px_8px_rgba(34,211,238,0.2)]"
                     >
-                      🚀 ENGINE START
+                      メールを起動して送信
                     </a>
+
+                    {!hasClickedSent ? (
+                      <Button
+                        onClick={() => setHasClickedSent(true)}
+                        className="w-full h-12 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-lg tracking-wider text-sm transition-all"
+                      >
+                        メール送信済
+                      </Button>
+                    ) : (
+                      <div className="w-full h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs font-medium gap-2">
+                        <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                        オーナーの確認を行っています...
+                      </div>
+                    )}
                   </div>
 
                   {errorMessage && (
@@ -287,6 +313,7 @@ export default function MyGarage() {
                     onClick={() => {
                       setIgnitionState("off");
                       setGeneratedCode("");
+                      setHasClickedSent(false);
                     }}
                     variant="ghost"
                     className="w-full h-10 text-slate-500 hover:text-white"
