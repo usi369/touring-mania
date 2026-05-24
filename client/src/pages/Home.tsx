@@ -6,6 +6,9 @@ import { useState, useEffect } from "react";
 import RulesScreen from "@/components/RulesScreen";
 import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut, Warehouse, Copy, Check } from "lucide-react";
 import GarageMarquee from "@/components/GarageMarquee";
+import { motion } from "framer-motion";
+
+const STAR_COLORS = ["#22d3ee", "#f43f5e", "#ffffff", "#a855f7"];
 
 /**
  * Touring Mania - Title Screen
@@ -64,6 +67,7 @@ export default function Home() {
   const [hasClickedSent, setHasClickedSent] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [isWarping, setIsWarping] = useState(false);
 
   const copyToClipboard = async (text: string, type: 'code' | 'email') => {
     try {
@@ -100,14 +104,22 @@ export default function Home() {
       setIgnitionState("igniting");
       const timer = setTimeout(() => {
         setIgnitionState("engine_on");
-        login(pollData.token, pollData.user).then(async () => {
-          setShowEmailModal(false);
-          setAuthStep("email");
-          setGeneratedCode("");
-          setIgnitionState("off");
-          setHasClickedSent(false);
-          // ログイン成功後は、ダイアログを閉じるのみでTOP画面に戻る
-        });
+        // 宇宙ワープ演出を開始
+        setIsWarping(true);
+        
+        // 1.5秒間の宇宙ワープ演出（全画面急拡大＆星屑飛び出し）が終わるまで待つ
+        const warpTimer = setTimeout(() => {
+          login(pollData.token, pollData.user).then(async () => {
+            setIsWarping(false);
+            setShowEmailModal(false);
+            setAuthStep("email");
+            setGeneratedCode("");
+            setIgnitionState("off");
+            setHasClickedSent(false);
+          });
+        }, 1500);
+        
+        return () => clearTimeout(warpTimer);
       }, 500); // 儀式を0.5秒に短縮してスムーズに開始
       return () => clearTimeout(timer);
     } else if (pollData && !pollData.verified && (pollData.status === "expired" || pollData.status === "not_found")) {
@@ -639,6 +651,99 @@ export default function Home() {
           animation: lcd-scanline 6s linear infinite;
         }
       `}} />
+
+      {/* ログイン成功時の宇宙ワープ演出 */}
+      {isWarping && (
+        <motion.div
+          initial={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            x: "-50%",
+            y: "-50%",
+            width: "320px",
+            height: "96px",
+            borderRadius: "12px",
+            scale: 0.8,
+            opacity: 0,
+            zIndex: 9999,
+          }}
+          animate={{
+            width: "100vw",
+            height: "100vh",
+            borderRadius: "0px",
+            scale: [1, 1.2, 8],
+            opacity: [0, 1, 1, 0],
+          }}
+          transition={{
+            duration: 1.5,
+            times: [0, 0.2, 1],
+            ease: "easeIn",
+          }}
+          style={{
+            backgroundImage: "url('/pixel_art_space.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            imageRendering: "pixelated",
+          }}
+          className="flex items-center justify-center overflow-hidden pointer-events-none"
+        >
+          {/* 走査線（スキャンライン）エフェクト */}
+          <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_bottom,transparent_50%,rgba(0,0,0,0.6)_50%)] bg-[size:100%_4px] pointer-events-none" />
+
+          {/* サイバー風グリッドオーバーレイ */}
+          <div className="absolute inset-0 opacity-15 bg-[linear-gradient(to_right,rgba(34,211,238,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.15)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
+
+          {/* 放射状に流れる星屑 */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {Array.from({ length: 40 }).map((_, i) => {
+              const angle = (i / 40) * Math.PI * 2 + Math.random() * 0.2;
+              const speed = 150 + Math.random() * 350;
+              const delay = Math.random() * 0.4;
+              const duration = 0.5 + Math.random() * 0.6;
+              const size = 2 + Math.random() * 4;
+              const color = STAR_COLORS[i % STAR_COLORS.length];
+
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ x: 0, y: 0, scale: 0.1, opacity: 0 }}
+                  animate={{
+                    x: Math.cos(angle) * speed,
+                    y: Math.sin(angle) * speed,
+                    scale: [0.1, 2.5, 4, 0.1],
+                    opacity: [0, 1, 1, 0],
+                  }}
+                  transition={{
+                    duration: duration,
+                    delay: delay,
+                    repeat: Infinity,
+                    ease: "easeIn",
+                  }}
+                  className="absolute rounded-full"
+                  style={{
+                    width: size,
+                    height: size,
+                    backgroundColor: color,
+                    boxShadow: `0 0 10px ${color}`,
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {/* ワープ時の光のフラッシュ効果 */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0, 0.8, 0] }}
+            transition={{ duration: 1.5, times: [0, 0.7, 0.9, 1] }}
+            className="absolute inset-0 bg-cyan-400 mix-blend-screen pointer-events-none"
+          />
+        </motion.div>
+      )}
     </div>
   );
 }
