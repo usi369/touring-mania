@@ -76,7 +76,7 @@ async function checkAndHandleDeadlock(db: any, gameId: number): Promise<boolean>
     // 2. 場札のチェック
     const field = await db.select().from(playedCards)
       .where(and(eq(playedCards.gameId, gameId), gt(playedCards.playerId, -1)))
-      .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+      .orderBy(desc(playedCards.id))
       .limit(1);
     if (field.length === 0) return false; // 場が流れているなら、親は何でも出せるので膠着ではない
 
@@ -224,7 +224,7 @@ export const gameRouter = router({
           .select()
           .from(playedCards)
           .where(eq(playedCards.gameId, input.gameId))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id));
+          .orderBy(desc(playedCards.id));
 
         fieldCards.forEach((pc: any) => {
           const ids: number[] = JSON.parse(pc.bikeIds);
@@ -439,7 +439,7 @@ export const gameRouter = router({
             eq(playedCards.gameId, input.gameId),
             gt(playedCards.playerId, -1)
           ))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+          .orderBy(desc(playedCards.id))
           .limit(1);
 
         const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
@@ -597,7 +597,7 @@ export const gameRouter = router({
             eq(playedCards.gameId, input.gameId),
             gt(playedCards.playerId, -1)
           ))
-          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+          .orderBy(desc(playedCards.id))
           .limit(1);
         let lastBikes: any[] = [];
         if (lastPlayed.length > 0) {
@@ -683,7 +683,7 @@ export const gameRouter = router({
                  eq(playedCards.gameId, input.gameId),
                  gt(playedCards.playerId, -1)
                ))
-               .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+               .orderBy(desc(playedCards.id))
                .limit(1);
 
              const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
@@ -750,7 +750,7 @@ export const gameRouter = router({
                eq(playedCards.gameId, input.gameId),
                gt(playedCards.playerId, -1)
              ))
-             .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+             .orderBy(desc(playedCards.id))
              .limit(1);
 
            const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;

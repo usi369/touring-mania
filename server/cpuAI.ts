@@ -28,8 +28,12 @@ export function canWinWithBike(
   
   // Get spec values
   const specKey = declaredSpec as keyof Bike;
-  const bikeValue = specKey === 'cylinders' ? parseInt(bike[specKey] as string, 10) || 1 : (bike[specKey] as number) || 0;
-  const lastValue = specKey === 'cylinders' ? parseInt(lastBike[specKey] as string, 10) || 1 : (lastBike[specKey] as number) || 0;
+  const bikeValue = specKey === 'cylinders' 
+    ? parseInt(bike[specKey] as string, 10) || 1 
+    : Number(bike[specKey]) || 0;
+  const lastValue = specKey === 'cylinders' 
+    ? parseInt(lastBike[specKey] as string, 10) || 1 
+    : Number(lastBike[specKey]) || 0;
 
   if (declaredDirection === 'up') {
     return bikeValue >= lastValue;
