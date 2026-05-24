@@ -51,8 +51,7 @@ for (const row of records) {
   const seatHeight = parseInt(row['シートmm'], 10) || 0;
   const totalLength = parseInt(row['全長mm'], 10) || 0;
   const year = parseInt(row['年式year'], 10) || 0;
-  const priceYen = parseInt(row['税込価格yen'], 10) || 0;
-  const price = Math.round(priceYen / 10000);
+  const price = parseInt(row['税込価格yen'], 10) || 0;
   const ownerName = row['なまえ'] || '';
   const ownerState = row['都道府県'] || '';
   const displacement = row['排気量'] || '';
