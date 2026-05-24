@@ -341,25 +341,30 @@ export const gameRouter = router({
         const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
         const activePlayers = allStates.filter((s: any) => s.passed === 0);
         
+        // プレイヤーがプレイしたカードが場にあるか確認
+        const lastPlayedCard = await db
+          .select({ playerId: playedCards.playerId })
+          .from(playedCards)
+          .where(and(
+            eq(playedCards.gameId, input.gameId),
+            gt(playedCards.playerId, -1)
+          ))
+          .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+          .limit(1);
+
+        const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
+        const clearLimit = hasPlayerPlayed ? 1 : 0;
+
         let nextPlayer = input.playerId;
         let trickCleared = false;
 
-        if (activePlayers.length <= 1) {
+        if (activePlayers.length <= clearLimit) {
           trickCleared = true;
           if (activePlayers.length === 1) {
             nextPlayer = activePlayers[0].playerId;
           } else {
             // 全員がパスした場合、最後にカードをプレイした人が勝者（親）になる
-            const lastPlayedCard = await db
-              .select({ playerId: playedCards.playerId })
-              .from(playedCards)
-              .where(and(
-                eq(playedCards.gameId, input.gameId),
-                gt(playedCards.playerId, -1)
-              ))
-              .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-              .limit(1);
-            if (lastPlayedCard.length > 0) {
+            if (lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0) {
               nextPlayer = lastPlayedCard[0].playerId;
             } else {
               nextPlayer = 1;
@@ -571,30 +576,34 @@ export const gameRouter = router({
            if (cpuStateIndex !== -1) allStates[cpuStateIndex].passed = 1;
            const passedCount = allStates.filter((s: any) => s.passed === 1).length;
            
+           const lastPlayedCard = await db
+             .select({ playerId: playedCards.playerId })
+             .from(playedCards)
+             .where(and(
+               eq(playedCards.gameId, input.gameId),
+               gt(playedCards.playerId, -1)
+             ))
+             .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+             .limit(1);
+
+           const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
+           const requiredPassedCount = hasPlayerPlayed ? game.playerCount - 1 : game.playerCount;
+
            let nextPlayer;
            let trickCleared = false;
            
-           if (passedCount >= game.playerCount - 1) {
+           if (passedCount >= requiredPassedCount) {
              trickCleared = true;
-             const winnerState = allStates.find((s: any) => Number(s.playerId) !== Number(cpuPlayerId) && s.passed === 0);
+             const winnerState = allStates.find((s: any) => s.passed === 0);
              if (winnerState) {
                nextPlayer = winnerState.playerId;
-             } else {
-               const lastPlayedCard = await db
-                 .select({ playerId: playedCards.playerId })
-                 .from(playedCards)
-                 .where(and(
-                   eq(playedCards.gameId, input.gameId),
-                   gt(playedCards.playerId, -1)
-                 ))
-                 .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
-                 .limit(1);
-               if (lastPlayedCard.length > 0) {
-                 nextPlayer = lastPlayedCard[0].playerId;
-               } else {
-                 nextPlayer = cpuPlayerId === 1 ? 2 : 1;
-               }
-             }
+              } else {
+                if (lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0) {
+                  nextPlayer = lastPlayedCard[0].playerId;
+                } else {
+                  nextPlayer = cpuPlayerId === 1 ? 2 : 1;
+                }
+              }
 
              await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
 
