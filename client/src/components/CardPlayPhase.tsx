@@ -222,7 +222,7 @@ export default function CardPlayPhase({
         </div>
         
         {fieldCards.length > 0 ? (
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-10 pb-8 snap-x snap-mandatory -mx-1 px-4 items-center min-h-[480px]" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-14 pb-8 snap-x snap-mandatory -mx-1 px-4 items-center min-h-[500px]" style={{ WebkitOverflowScrolling: 'touch' }}>
             {fieldCards.map((fc: any, recordIdx: number) => {
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
@@ -266,11 +266,11 @@ export default function CardPlayPhase({
                       }}
                     >
                       {isCurrentCriteria && (
-                        <div className="absolute -top-4 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
+                        <div className="absolute -top-9 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
                           現在の基準
                         </div>
                       )}
-                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md border border-white/10 ${
                           absPlayerId === 0 ? 'bg-amber-500 text-slate-950' : 
                           absPlayerId === 1 ? 'bg-green-500 text-white' : 'bg-slate-700 text-white'
@@ -290,7 +290,7 @@ export default function CardPlayPhase({
                     key={`${fc.id}-${bike.id}-${bikeIdx}`}
                     className="flex-shrink-0 transition-all duration-300 snap-center relative opacity-50 scale-90 grayscale hover:opacity-85"
                   >
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-md border border-white/10 ${
                         absPlayerId === 0 ? 'bg-amber-500 text-slate-950' : 
                         absPlayerId === 1 ? 'bg-green-500 text-white' : 'bg-slate-700 text-white'
