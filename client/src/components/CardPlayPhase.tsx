@@ -222,7 +222,7 @@ export default function CardPlayPhase({
         </div>
         
         {fieldCards.length > 0 ? (
-          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-14 pb-8 snap-x snap-mandatory -mx-1 px-4 items-center min-h-[500px]" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex gap-2 sm:gap-4 overflow-x-auto pt-16 pb-8 snap-x snap-mandatory -mx-1 px-4 items-center min-h-[540px]" style={{ WebkitOverflowScrolling: 'touch' }}>
             {fieldCards.map((fc: any, recordIdx: number) => {
               const bikes = fc.bikes || [];
               if (bikes.length === 0) return null;
