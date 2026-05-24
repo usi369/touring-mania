@@ -46,6 +46,13 @@ const specLabels: Record<string, string> = {
 
 const getSpecLabel = (spec: string) => specLabels[spec] || spec;
 
+const getBindValueLabel = (bindType: string, bindValue: string) => {
+  if (bindType === 'maker') return `${bindValue}縛り`;
+  if (bindType === 'cylinders') return `${bindValue === '単' ? '単気筒' : `${bindValue}気筒`}縛り`;
+  if (bindType === 'transmission') return `${bindValue}縛り`;
+  return `${bindValue}縛り`;
+};
+
 export default function CardPlayPhase({
   currentPlayer,
   currentPlayerName,
@@ -281,6 +288,17 @@ export default function CardPlayPhase({
                         size="medium" 
                         activeSpec={declaredSpec}
                       />
+                      {fc.declaredSpec && (
+                        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-medium text-slate-400/80 whitespace-nowrap bg-slate-950/40 px-1.5 py-0.5 rounded backdrop-blur-xs flex items-center gap-1 border border-white/5 shadow-xs">
+                          <span>{getSpecLabel(fc.declaredSpec)}{fc.declaredDirection === 'up' ? '▲' : '▼'}</span>
+                          {fc.bindType && fc.bindValue && (
+                            <>
+                              <span className="text-slate-600">|</span>
+                              <span className="text-cyan-400/80">{getBindValueLabel(fc.bindType, fc.bindValue)}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </motion.div>
                   );
                 }
@@ -301,6 +319,17 @@ export default function CardPlayPhase({
                       size="medium" 
                       activeSpec={declaredSpec}
                     />
+                    {fc.declaredSpec && (
+                      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] font-medium text-slate-400/80 whitespace-nowrap bg-slate-950/40 px-1.5 py-0.5 rounded backdrop-blur-xs flex items-center gap-1 border border-white/5 shadow-xs">
+                        <span>{getSpecLabel(fc.declaredSpec)}{fc.declaredDirection === 'up' ? '▲' : '▼'}</span>
+                        {fc.bindType && fc.bindValue && (
+                          <>
+                            <span className="text-slate-600">|</span>
+                            <span className="text-cyan-400/80">{getBindValueLabel(fc.bindType, fc.bindValue)}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               });

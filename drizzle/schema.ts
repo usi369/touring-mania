@@ -110,6 +110,10 @@ export const playedCards = sqliteTable("playedCards", {
   playerId: integer("playerId").notNull(),
   bikeIds: text("bikeIds").notNull(), // JSON array of bike IDs
   playedAt: integer("playedAt", { mode: "timestamp" }).default(sql`(strftime('%s', 'now'))`).notNull(),
+  declaredSpec: text("declaredSpec", { length: 50 }),
+  declaredDirection: text("declaredDirection", { length: 10 }),
+  bindType: text("bindType", { length: 50 }),
+  bindValue: text("bindValue", { length: 255 }),
 });
 
 export type PlayedCard = typeof playedCards.$inferSelect;

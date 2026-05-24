@@ -166,6 +166,10 @@ export const gameRouter = router({
             playerId: pc.playerId,
             bikeIds: ids,
             bikes: ids.map((id) => bikesMap.get(id)).filter(Boolean),
+            declaredSpec: pc.declaredSpec,
+            declaredDirection: pc.declaredDirection,
+            bindType: pc.bindType,
+            bindValue: pc.bindValue,
           };
         });
 
@@ -286,6 +290,10 @@ export const gameRouter = router({
           gameId: input.gameId,
           playerId: input.playerId,
           bikeIds: JSON.stringify(input.bikeIds),
+          declaredSpec: game.declaredSpec,
+          declaredDirection: game.declaredDirection,
+          bindType: input.bindDeclare ? input.bindDeclare.type : game.currentBind,
+          bindValue: input.bindDeclare ? input.bindDeclare.value : game.bindValue,
         });
 
         // Handle bind
@@ -535,7 +543,11 @@ export const gameRouter = router({
           await db.insert(playedCards).values({ 
             gameId: input.gameId, 
             playerId: cpuPlayerId, 
-            bikeIds: JSON.stringify(decision.bikeIds) 
+            bikeIds: JSON.stringify(decision.bikeIds),
+            declaredSpec: game.declaredSpec,
+            declaredDirection: game.declaredDirection,
+            bindType: decision.bindDeclare ? decision.bindDeclare.type : game.currentBind,
+            bindValue: decision.bindDeclare ? decision.bindDeclare.value : game.bindValue,
           });
           
           if (decision.bindDeclare) await db.update(games).set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value }).where(eq(games.id, input.gameId));
