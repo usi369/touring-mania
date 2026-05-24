@@ -51,7 +51,12 @@ for (const row of records) {
   const seatHeight = parseInt(row['シートmm'], 10) || 0;
   const totalLength = parseInt(row['全長mm'], 10) || 0;
   const year = parseInt(row['年式year'], 10) || 0;
-  const price = parseInt(row['価格yen'], 10) || 0;
+  const price = parseInt(row['税込価格yen'], 10) || 0;
+  const ownerName = row['なまえ'] || '';
+  const ownerState = row['都道府県'] || '';
+  const displacement = row['排気量'] || '';
+  const displacementUnit = row['排気量単位'] || '';
+  const engineType = row['エンジンモーター'] || '';
   
   const formattedId = String(id).padStart(4, '0');
   const photoUrl = `https://pub-4f701e7dd07e451ca0cfc163b0291e5d.r2.dev/bike_${formattedId}.jpg`;
@@ -70,6 +75,11 @@ for (const row of records) {
     totalLength,
     year,
     price,
+    ownerName,
+    ownerState,
+    displacement,
+    displacementUnit,
+    engineType,
     photoUrl,
     isTokyoRemake,
     isR6Complete,

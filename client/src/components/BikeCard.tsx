@@ -17,6 +17,11 @@ interface BikeInfo {
   year: number;
   category: string;
   photoUrl: string | null;
+  ownerName?: string | null;
+  ownerState?: string | null;
+  displacement?: string | null;
+  displacementUnit?: string | null;
+  engineType?: string | null;
 }
 
 interface BikeCardProps {
@@ -27,6 +32,7 @@ interface BikeCardProps {
   size?: "small" | "medium" | "large";
   activeSpec?: string;
   isPokerRatio?: boolean;
+  isEncyclopedia?: boolean;
 }
 
 const SPEC_ITEMS = [
@@ -39,6 +45,18 @@ const SPEC_ITEMS = [
   { key: "year", label: "発売年月日", unit: "年" },
 ];
 
+const MODAL_SPEC_ITEMS = [
+  { key: "horsepower", label: "馬力", unit: "PS" },
+  { key: "fuelEfficiency", label: "燃費", unit: "km/L" },
+  { key: "seatHeight", label: "シート高", unit: "mm" },
+  { key: "totalLength", label: "全長", unit: "mm" },
+  { key: "weight", label: "重量", unit: "kg" },
+  { key: "price", label: "価格", unit: "万円" },
+  { key: "year", label: "発売年", unit: "年" },
+  { key: "cylinders", label: "気筒数", unit: "" },
+  { key: "transmission", label: "変速機", unit: "" },
+];
+
 export default function BikeCard({
   bike,
   isSelected = false,
@@ -47,17 +65,20 @@ export default function BikeCard({
   size = "medium",
   activeSpec,
   isPokerRatio = false,
+  isEncyclopedia = false,
 }: BikeCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [showBack, setShowBack] = useState(false);
 
   const sizeClasses = {
     small: "w-16 h-24",
-    medium: "w-44 h-auto min-h-[250px] p-4",
-    large: "w-52 h-auto min-h-[300px] p-5",
+    medium: "w-44 h-[420px] p-4",
+    large: "w-52 h-[490px] p-5",
   };
 
   const handleCardClick = () => {
     if (showDetails) {
+      setShowBack(false);
       setShowModal(true);
     }
     onClick?.();
@@ -80,25 +101,28 @@ export default function BikeCard({
           ${showDetails ? "hover:shadow-2xl" : ""}
         `}
       >
-        <div className="w-full flex flex-col h-full text-center relative z-10">
-          {/* Top Bar (ID & Badges) - Reverted to original positions */}
-          {size !== "small" && (
-            <div className="flex justify-between items-start w-full mb-1">
-              <div className="bg-slate-900/80 backdrop-blur-sm px-2 py-0.5 rounded-br-lg border-b border-r border-white/10 -ml-3 -mt-3 sm:-ml-5 sm:-mt-5 z-20">
-                <p className="text-[10px] font-mono text-cyan-400">
-                  #{bike.id.toString().padStart(3, '0')}
-                </p>
-              </div>
-              <div className="flex gap-1 -mr-3 -mt-3 sm:-mr-5 sm:-mt-5 z-20">
-                <span className="px-1.5 py-0.5 bg-pink-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10">
-                  {bike.transmission}
-                </span>
-                <span className="px-1.5 py-0.5 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white border-b border-l border-white/10">
-                  {bike.cylinders}気筒
-                </span>
-              </div>
+        {/* Top Bar (ID & Badges) - Positioned absolutely to touch edges and fit rounded corners */}
+        {size !== "small" && (
+          <>
+            <div className="absolute top-0 left-0 bg-slate-900/80 backdrop-blur-sm pl-3 pr-2.5 pt-1.5 pb-1 rounded-br-lg border-b border-r border-white/10 z-20">
+              <p className="text-[10px] font-mono text-cyan-400 leading-none">
+                #{bike.id.toString().padStart(3, '0')}
+              </p>
             </div>
-          )}
+            <div className="absolute top-0 right-0 flex z-20">
+              <span className="px-2 pt-1.5 pb-1 bg-pink-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10 leading-none">
+                {bike.transmission}
+              </span>
+              <span className="pl-2 pr-3 pt-1.5 pb-1 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10 leading-none">
+                {bike.cylinders}気筒
+              </span>
+            </div>
+          </>
+        )}
+
+        <div className="w-full flex flex-col h-full text-center relative z-10">
+          {/* Spacer to prevent header from overlapping absolute badges */}
+          {size !== "small" && <div className="h-4" />}
 
           {/* Header Info - Center Top */}
           <div className={`${isPokerRatio ? "mb-1" : "mb-2"} mt-1`}>
@@ -107,7 +131,7 @@ export default function BikeCard({
             </p>
             <div className={`
               flex flex-col justify-center
-              ${isPokerRatio ? 'min-h-[44px]' : (size === 'large' ? 'min-h-[66px]' : 'min-h-[54px]')}
+              ${isPokerRatio ? 'h-[44px]' : (size === 'large' ? 'h-[72px]' : 'h-[60px]')}
             `}>
               <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
                 {bike.name}
@@ -118,7 +142,7 @@ export default function BikeCard({
           {size !== "small" && (
             <>
               {/* Bike Image - Border fitting the actual image size */}
-              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-square"} overflow-hidden mb-3 group relative flex items-center justify-center`}>
+              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-square"} overflow-hidden ${isEncyclopedia ? "mb-1" : "mb-3"} group relative flex items-center justify-center`}>
                 {bike.photoUrl ? (
                   <img 
                     src={bike.photoUrl} 
@@ -129,11 +153,20 @@ export default function BikeCard({
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50">
+                  <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50 rounded-lg">
                     <span className="text-[10px] font-bold tracking-tighter uppercase">No Image</span>
                   </div>
                 )}
               </div>
+
+              {/* Specs below image - minimized vertical padding */}
+              {isEncyclopedia && (bike.displacement || bike.engineType) && (
+                <div className="text-[11px] font-mono font-bold text-slate-400 -mt-0.5 mb-1.5 leading-none">
+                  {bike.displacement && `${bike.displacement}${bike.displacementUnit || ''}`}
+                  {bike.displacement && bike.engineType && ' '}
+                  {bike.engineType}
+                </div>
+              )}
 
               {/* Quick Specs List */}
               <div className={`space-y-0.5 sm:space-y-1 mt-auto border-t border-white/10 ${isPokerRatio ? "pt-2 sm:pt-3" : "pt-3"}`}>
@@ -180,33 +213,124 @@ export default function BikeCard({
               <p className="text-sm text-slate-400">{bike.maker}</p>
             </div>
 
-            {/* Specs Grid - 7 main specs */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {SPEC_ITEMS.map((spec) => (
-                <div key={spec.key} className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-                  <p className="text-xs text-slate-400 mb-1">{spec.label}</p>
-                  <p className="text-lg font-bold text-white">
-                    {(bike as any)[spec.key] ?? "-"}{spec.unit}
-                  </p>
+            {/* Modal Image - Always Aspect Square (Optimized size) */}
+            <div className="w-40 h-40 mx-auto overflow-hidden mb-4 rounded-xl border border-white/10 bg-slate-950/50 flex items-center justify-center relative">
+              {bike.photoUrl ? (
+                <img 
+                  src={bike.photoUrl} 
+                  alt={bike.name} 
+                  className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50 rounded-lg">
+                  <span className="text-xs font-bold tracking-tighter uppercase">No Image</span>
                 </div>
-              ))}
+              )}
             </div>
 
-            {/* Additional info */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-                <p className="text-xs text-slate-400 mb-1">気筒数</p>
-                <p className="text-lg font-bold text-cyan-400">
-                  {bike.cylinders}
-                </p>
+            {/* Tab Control (Only for Encyclopedia) */}
+            {isEncyclopedia && (
+              <div className="flex bg-slate-800/50 p-1 rounded-lg mb-4 border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setShowBack(false)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                    !showBack
+                      ? "bg-slate-700 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  スペック（表）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBack(true)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                    showBack
+                      ? "bg-slate-700 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  持ち主情報（裏）
+                </button>
               </div>
-              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-                <p className="text-xs text-slate-400 mb-1">変速機</p>
-                <p className="text-lg font-bold text-pink-400">
-                  {bike.transmission}
-                </p>
+            )}
+
+            {!showBack ? (
+              <div 
+                onClick={() => isEncyclopedia && setShowBack(true)}
+                className={isEncyclopedia ? "cursor-pointer" : ""}
+              >
+                {/* Specs Grid - 3 Columns (Optimized layout) */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {MODAL_SPEC_ITEMS.map((spec) => {
+                    let val = (bike as any)[spec.key] ?? "-";
+                    let colorClass = "text-white";
+                    
+                    if (spec.key === "cylinders") {
+                      colorClass = "text-cyan-400";
+                      if (val !== "-") val = `${val}気筒`;
+                    } else if (spec.key === "transmission") {
+                      colorClass = "text-pink-400";
+                    }
+                    
+                    return (
+                      <div key={spec.key} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-2 min-h-[58px] flex flex-col justify-between">
+                        <p className="text-[9px] text-slate-400 font-bold leading-none mb-1">{spec.label}</p>
+                        <p className={`text-base font-black ${colorClass} leading-tight`}>
+                          {val}
+                          {spec.unit && spec.key !== "cylinders" && (
+                            <span className="text-[9px] ml-0.5 text-slate-500 font-normal">{spec.unit}</span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Owner Info (Back side - Compact version) */
+              <div 
+                onClick={() => setShowBack(false)}
+                className="space-y-4 mb-6 cursor-pointer"
+              >
+                <div className="bg-gradient-to-br from-pink-500/10 to-cyan-500/10 border border-cyan-500/20 rounded-xl p-4 relative overflow-hidden min-h-[200px] flex flex-col justify-between">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
+                  
+                  <div>
+                    <span className="text-[10px] font-mono tracking-widest text-slate-500 uppercase block mb-1">
+                      BIKE OWNER CARD
+                    </span>
+                    <h3 className="text-lg font-black text-cyan-400 mb-3 tracking-wider">
+                      持ち主の記録
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[10px] text-slate-500 font-bold mb-0.5">なまえ</p>
+                        <p className="text-lg font-bold text-white tracking-wide">
+                          {bike.ownerName || "未登録"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-500 font-bold mb-0.5">都道府県</p>
+                        <p className="text-base font-bold text-slate-200">
+                          {bike.ownerState || "未登録"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-slate-500 font-bold">
+                    <span>TOURING MANIA OFFICIAL</span>
+                    <span className="text-cyan-400 animate-pulse">TAP TO FLIP</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Close Button */}
             <button

@@ -5,13 +5,13 @@ const bikesData = JSON.parse(fs.readFileSync('./bikes_data.json', 'utf-8'));
 const DB_NAME = 'touring-mania-db';
 const WRANGLER_PATH = '.\\node_modules\\.bin\\wrangler.cmd';
 
-async function seedD1() {
-  console.log(`Starting seed for ${DB_NAME} (Remote)...`);
+async function seedD1Local() {
+  console.log(`Starting seed for ${DB_NAME} (Local)...`);
 
   try {
     // Clear existing data first
     console.log('Clearing existing bike data...');
-    execSync(`${WRANGLER_PATH} d1 execute ${DB_NAME} --remote --command="DELETE FROM bikes;"`, { stdio: 'inherit' });
+    execSync(`${WRANGLER_PATH} d1 execute ${DB_NAME} --local --command="DELETE FROM bikes;"`, { stdio: 'inherit' });
 
     console.log(`Inserting ${bikesData.length} bikes in chunks...`);
     
@@ -36,14 +36,14 @@ async function seedD1() {
       console.log(`Executing chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(bikesData.length / chunkSize)}...`);
       // Escape double quotes for shell
       const escapedSql = sql.replace(/"/g, '\\"');
-      execSync(`${WRANGLER_PATH} d1 execute ${DB_NAME} --remote --command="${escapedSql}"`, { stdio: 'inherit' });
+      execSync(`${WRANGLER_PATH} d1 execute ${DB_NAME} --local --command="${escapedSql}"`, { stdio: 'inherit' });
     }
 
-    console.log('Successfully seeded D1 database.');
+    console.log('Successfully seeded D1 local database.');
   } catch (error) {
-    console.error('Error seeding D1:', error);
+    console.error('Error seeding D1 local:', error);
     process.exit(1);
   }
 }
 
-seedD1();
+seedD1Local();

@@ -672,7 +672,7 @@ export default function GameBoard() {
                 </div>
                 {/* Front */}
                 <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(34,211,238,0.4)]" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                  <BikeCard bike={drawnBikeForAnimation} size="large" showDetails={true} />
+                  <BikeCard bike={drawnBikeForAnimation} size="large" showDetails={true} isPokerRatio={true} />
                 </div>
               </motion.div>
             </motion.div>

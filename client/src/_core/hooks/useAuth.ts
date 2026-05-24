@@ -36,7 +36,7 @@ export function useAuth(options?: UseAuthOptions) {
       localStorage.removeItem("touring-mania-jwt");
       localStorage.removeItem("manus-runtime-user-info");
       setToken(null);
-      utils.auth.me.setData(undefined, null);
+      utils.auth.me.setData(undefined, undefined);
       await utils.auth.me.invalidate();
     }
   }, [utils, logoutMutation]);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/Toast";
@@ -67,6 +67,51 @@ export default function CardPlayPhase({
   const [showBindDialog, setShowBindDialog] = useState(false);
   const [selectedBindType, setSelectedBindType] = useState<string | null>(null);
   const [selectedBindValue, setSelectedBindValue] = useState<string | null>(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  // 自分のターンが開始または終了した際にカードを引いたフラグをリセット
+  useEffect(() => {
+    if (!isYourTurn) {
+      setHasDrawn(false);
+    }
+  }, [isYourTurn]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [canScroll, setCanScroll] = useState(false);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) {
+      setScrollProgress(0);
+      return;
+    }
+    setScrollProgress((el.scrollLeft / maxScroll) * 100);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const updateScrollState = () => {
+      setCanScroll(el.scrollWidth > el.clientWidth);
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll <= 0) {
+        setScrollProgress(0);
+      } else {
+        setScrollProgress((el.scrollLeft / maxScroll) * 100);
+      }
+    };
+
+    updateScrollState();
+
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [playerHand]);
 
   const handleCardSelect = (bikeId: number) => {
     if (isYourTurn) {
@@ -189,7 +234,8 @@ export default function CardPlayPhase({
               
               // 複数枚出された場合も最新（最後に選択されたもの）を左にするためreverse
               return bikes.slice().reverse().map((bike: any, bikeIdx: number) => {
-                const isLatestCard = isLatestRecord && bikeIdx === 0 && !isCleared;
+                const isLatestCard = isLatestRecord && bikeIdx === 0;
+                const isCurrentCriteria = isLatestCard && !isCleared;
                 const isCPU = absPlayerId !== 1 && absPlayerId !== 0;
                 const isPlayer = absPlayerId === 1;
                 
@@ -219,10 +265,12 @@ export default function CardPlayPhase({
                         duration: 0.6
                       }}
                     >
-                      <div className="absolute -top-4 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
-                        現在の基準
-                      </div>
-                      <div className="absolute top-2 right-2 z-20">
+                      {isCurrentCriteria && (
+                        <div className="absolute -top-4 -left-2 bg-amber-500 text-slate-900 text-[10px] font-black px-2 py-1 rounded-full shadow-lg z-20 leading-tight whitespace-nowrap">
+                          現在の基準
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
                           absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
                           absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
@@ -240,11 +288,9 @@ export default function CardPlayPhase({
                 return (
                   <div
                     key={`${fc.id}-${bike.id}-${bikeIdx}`}
-                    className={`flex-shrink-0 transition-all duration-300 snap-center relative ${
-                      isCleared ? 'opacity-35 scale-90 grayscale' : 'opacity-60 scale-95 hover:opacity-100'
-                    }`}
+                    className="flex-shrink-0 transition-all duration-300 snap-center relative opacity-50 scale-90 grayscale hover:opacity-85"
                   >
-                    <div className="absolute top-2 right-2 z-20">
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
                         absPlayerId === 0 ? 'bg-amber-500/80 text-white' : 
                         absPlayerId === 1 ? 'bg-green-500/80 text-white' : 'bg-slate-600/80 text-white'
@@ -271,9 +317,14 @@ export default function CardPlayPhase({
       {/* Card Selection Area */}
       <div className="bg-slate-800/30 border border-slate-700 rounded-lg p-3 sm:p-4">
         <p className="text-xs text-slate-400 mb-3">
-          {isYourTurn ? "カードを選択してください（← 横スクロールできます →）" : "あなたの手札（他のプレイヤーのターン中）"}
+          {isYourTurn ? "カードを選択してください" : "あなたの手札（他のプレイヤーのターン中）"}
         </p>
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-2 snap-x snap-mandatory -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-2 snap-x snap-mandatory -mx-1 px-1" 
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {playerHand.map((bike: any) => {
             const selectionIndex = selectedCards.indexOf(bike.id);
             const isSelected = selectionIndex !== -1;
@@ -296,6 +347,18 @@ export default function CardPlayPhase({
             );
           })}
         </div>
+        {canScroll && (
+          <div className="mt-3 flex items-center justify-between px-2 gap-4">
+            <span className="text-[10px] font-mono text-cyan-400 animate-pulse">◀ ◀</span>
+            <div className="flex-1 h-[2px] bg-slate-950/60 rounded-full overflow-hidden relative border border-white/5">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-500 to-pink-500 rounded-full transition-all duration-75"
+                style={{ width: `${scrollProgress}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-mono text-pink-500 animate-pulse">▶ ▶</span>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
@@ -332,14 +395,19 @@ export default function CardPlayPhase({
             >
               スキップ
             </Button>
-            <Button
-              variant="outline"
-              className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800 text-xs sm:text-sm py-2 sm:py-2.5"
-              disabled={isLoading}
-              onClick={onDraw}
-            >
-              山札から引く
-            </Button>
+            {!hasDrawn && (
+              <Button
+                variant="outline"
+                className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800 text-xs sm:text-sm py-2 sm:py-2.5"
+                disabled={isLoading}
+                onClick={async () => {
+                  await onDraw();
+                  setHasDrawn(true);
+                }}
+              >
+                山札から引く
+              </Button>
+            )}
           </>
         )}
       </div>

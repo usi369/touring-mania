@@ -197,6 +197,7 @@ export default function Encyclopedia() {
                   bike={bike as any} 
                   showDetails={true} 
                   isPokerRatio={true}
+                  isEncyclopedia={true}
                 />
               </div>
             ))}

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { games, gameStates, bikes, decks, playedCards } from "../../drizzle/schema";
-import { eq, inArray, and, desc, asc, sql, ne } from "drizzle-orm";
+import { eq, inArray, and, desc, asc, sql, ne, gt } from "drizzle-orm";
 import { rollDice, determineTurnOrder, canPlayCard, getNextPlayer } from "../gameLogic";
 import { decideCPUAction, decideCPUDeclaration } from "../cpuAI";
 
@@ -443,7 +443,12 @@ export const gameRouter = router({
 
         const game = await db.select().from(games).where(eq(games.id, input.gameId)).limit(1);
         const nextPlayer = getNextPlayer(input.playerId, game[0].playerCount, [1, 2, 3, 4].slice(0, game[0].playerCount));
-        await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+        
+        // プレイヤー自身 (playerId === 1) の場合は引いたカードをプレイするかスキップするかを選べるようにターンを維持する。
+        // CPU の場合は引いた後に自動的に次のプレイヤーにターンを移行させる。
+        if (input.playerId !== 1) {
+          await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+        }
 
         await checkGameIntegrity(db, input.gameId, 'DRAW_AFTER');
 

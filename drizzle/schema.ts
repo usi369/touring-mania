@@ -44,6 +44,11 @@ export const bikes = sqliteTable("bikes", {
   year: integer("year").notNull(),
   price: integer("price").notNull(), // 万円
   photoUrl: text("photoUrl", { length: 500 }), // R2上のバイク画像URL
+  ownerName: text("ownerName", { length: 255 }),
+  ownerState: text("ownerState", { length: 255 }),
+  displacement: text("displacement", { length: 50 }),
+  displacementUnit: text("displacementUnit", { length: 50 }),
+  engineType: text("engineType", { length: 50 }),
   isTokyoRemake: integer("isTokyoRemake", { mode: "boolean" }).default(false).notNull(),
   isR6Complete: integer("isR6Complete", { mode: "boolean" }).default(false).notNull(),
   isR7Mega: integer("isR7Mega", { mode: "boolean" }).default(false).notNull(),
