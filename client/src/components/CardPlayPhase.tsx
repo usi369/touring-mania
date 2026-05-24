@@ -412,9 +412,17 @@ export default function CardPlayPhase({
         )}
       </div>
 
+      {showBindDialog && (
+        <div className="fixed inset-0 bg-black/50 z-40 pointer-events-none animate-in fade-in duration-200" />
+      )}
+
       {/* Bind Declaration Dialog */}
-      <Dialog open={showBindDialog} onOpenChange={setShowBindDialog}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-[90vw] sm:max-w-md">
+      <Dialog open={showBindDialog} onOpenChange={setShowBindDialog} modal={false}>
+        <DialogContent 
+          className="bg-slate-900 border-slate-700 max-w-[90vw] sm:max-w-md z-50"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-cyan-400">縛りを宣言しますか？</DialogTitle>
           </DialogHeader>
