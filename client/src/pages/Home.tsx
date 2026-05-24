@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import RulesScreen from "@/components/RulesScreen";
-import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut, Warehouse } from "lucide-react";
+import { HelpCircle, BookOpen, User, PlayCircle, LogIn, LogOut, Warehouse, Copy, Check } from "lucide-react";
 import GarageMarquee from "@/components/GarageMarquee";
 
 /**
@@ -62,6 +62,23 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
   const [ignitionState, setIgnitionState] = useState<"off" | "key_inserting" | "key_on" | "cranking" | "igniting" | "engine_on">("off");
   const [hasClickedSent, setHasClickedSent] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const copyToClipboard = async (text: string, type: 'code' | 'email') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'code') {
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      } else {
+        setCopiedEmail(true);
+        setTimeout(() => setCopiedEmail(false), 2000);
+      }
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
+  };
 
   const sendOtpMutation = trpc.auth.sendOtp.useMutation();
 
@@ -452,13 +469,41 @@ export default function Home() {
             ) : (
               <div className="space-y-5">
                 {/* ログイン認証ヘッダーと説明 */}
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-3">
                   <div className="text-xs text-slate-400">
                     宛先や本文は変更せず、そのままメールを送信してください。
                   </div>
-                  <div className="bg-slate-950 border border-slate-800 p-3 rounded-lg text-center font-mono">
-                    <span className="text-slate-500 text-[10px] block mb-1">認証コード</span>
-                    <span className="text-xl font-black text-cyan-300 tracking-widest">{generatedCode}</span>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono relative flex flex-col items-center justify-center min-h-[64px]">
+                      <span className="text-slate-500 text-[9px] block mb-0.5">認証コード</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-lg font-black text-cyan-300 tracking-widest">{generatedCode}</span>
+                        <button
+                          onClick={() => copyToClipboard(generatedCode, 'code')}
+                          className="text-slate-500 hover:text-cyan-400 p-1 transition-colors"
+                          title="コードをコピー"
+                          type="button"
+                        >
+                          {copiedCode ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono relative flex flex-col items-center justify-center min-h-[64px]">
+                      <span className="text-slate-500 text-[9px] block mb-0.5">送信先メールアドレス (宛先)</span>
+                      <div className="flex items-center gap-1.5 max-w-full">
+                        <span className="text-[10px] font-bold text-slate-300 truncate max-w-[110px]">login@nirin-hub.me</span>
+                        <button
+                          onClick={() => copyToClipboard("login@nirin-hub.me", 'email')}
+                          className="text-slate-500 hover:text-cyan-400 p-1 flex-shrink-0 transition-colors"
+                          title="宛先をコピー"
+                          type="button"
+                        >
+                          {copiedEmail ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -467,7 +512,7 @@ export default function Home() {
                   <div className="flex gap-2">
                     <span className="w-5 h-5 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold flex-shrink-0">1</span>
                     <p className="text-slate-300">
-                      「メールを起動して送信」ボタンを押し、お使いのメールソフトでメールを送信します。
+                      「メールを起動して送信」ボタンからメールを送信します。（起動しない場合は上記の宛先とコードをコピーして手動送信してください）
                     </p>
                   </div>
                   <div className="flex gap-2">
