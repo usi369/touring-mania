@@ -76,6 +76,11 @@ export default function GameBoard() {
     bindType: string;
     bindValue: string;
   }>(null);
+  const [cpuActionNotify, setCpuActionNotify] = useState<null | {
+    id: string;
+    playerId: number;
+    actionType: 'draw' | 'pass';
+  }>(null);
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
     const newLog: LogEntry = {
@@ -263,10 +268,22 @@ export default function GameBoard() {
             addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
           }
         } else {
-          if (result.action === 'draw') {
-            addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
-          } else if (result.action === 'pass') {
-            addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
+          if (result.action === 'draw' || result.action === 'pass') {
+            const actionId = nanoid();
+            setCpuActionNotify({
+              id: actionId,
+              playerId: result.cpuPlayerId,
+              actionType: result.action,
+            });
+            setTimeout(() => {
+              setCpuActionNotify(prev => (prev?.id === actionId ? null : prev));
+            }, 1200);
+
+            if (result.action === 'draw') {
+              addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
+            } else if (result.action === 'pass') {
+              addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
+            }
           }
           // play以外の時は通常通り最新状態を取得
           await getStateQuery.refetch();
@@ -868,6 +885,77 @@ export default function GameBoard() {
                 style={{ background: 'linear-gradient(to right, transparent, rgba(236,72,153,0.8), transparent)' }}
               />
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CPU Quick Action Notification Overlay (Non-blocking) */}
+      <AnimatePresence>
+        {cpuActionNotify && (
+          <motion.div
+            key={cpuActionNotify.id}
+            initial={{ opacity: 0, y: -30, scale: 0.9, rotateX: -15 }}
+            animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[80] pointer-events-none flex flex-col items-center perspective-1000"
+          >
+            <div
+              className="flex items-center gap-4 px-6 py-3 rounded-xl border backdrop-blur-md relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(8,15,30,0.92) 0%, rgba(2,6,15,0.95) 100%)',
+                borderColor: cpuActionNotify.actionType === 'pass' ? 'rgba(236,72,153,0.5)' : 'rgba(34,211,238,0.5)',
+                boxShadow: cpuActionNotify.actionType === 'pass' 
+                  ? '0 0 30px rgba(236,72,153,0.25), inset 0 1px 0 rgba(255,255,255,0.1)'
+                  : '0 0 30px rgba(34,211,238,0.25), inset 0 1px 0 rgba(255,255,255,0.1)',
+                transform: 'skewX(-6deg)'
+              }}
+            >
+              {/* 装飾用サイバーグリフ */}
+              <div className="absolute top-0 right-0 w-2 h-2 bg-cyan-400/20" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+
+              {/* アイコン */}
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: cpuActionNotify.actionType === 'pass' ? 'rgba(236,72,153,0.15)' : 'rgba(34,211,238,0.15)',
+                  border: cpuActionNotify.actionType === 'pass' ? '1px solid rgba(236,72,153,0.3)' : '1px solid rgba(34,211,238,0.3)',
+                  transform: 'skewX(6deg)'
+                }}
+              >
+                {cpuActionNotify.actionType === 'pass' ? (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-pink-500" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-cyan-400" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                  </svg>
+                )}
+              </div>
+
+              {/* テキスト */}
+              <div className="flex flex-col select-none" style={{ transform: 'skewX(6deg)' }}>
+                <span className="text-[9px] uppercase tracking-[0.25em] font-black text-slate-500">
+                  Player {cpuActionNotify.playerId}
+                </span>
+                <span 
+                  className="text-lg font-black italic tracking-wider leading-none"
+                  style={{
+                    color: cpuActionNotify.actionType === 'pass' ? '#ec4899' : '#22d3ee',
+                    textShadow: cpuActionNotify.actionType === 'pass' 
+                      ? '0 0 10px rgba(236,72,153,0.5)'
+                      : '0 0 10px rgba(34,211,238,0.5)',
+                    fontFamily: "'Outfit', 'Inter', sans-serif"
+                  }}
+                >
+                  {cpuActionNotify.actionType === 'pass' ? 'PASS / SKIP' : 'DRAW CARD'}
+                </span>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
