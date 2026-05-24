@@ -106,14 +106,7 @@ export default function Home() {
           setGeneratedCode("");
           setIgnitionState("off");
           setHasClickedSent(false);
-
-          // ログイン成功時に進行中のゲームをチェック
-          const res = await activeGameQuery.refetch();
-          if (res.data?.activeGameId) {
-            setShowResumeModal(true);
-          } else {
-            setShowTitleSelect(true);
-          }
+          // ログイン成功後は、ダイアログを閉じるのみでTOP画面に戻る
         });
       }, 500); // 儀式を0.5秒に短縮してスムーズに開始
       return () => clearTimeout(timer);
@@ -128,11 +121,19 @@ export default function Home() {
     }
   }, [pollData]);
 
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     if (isAuthenticated) {
-      if (activeGameQuery.data?.activeGameId) {
-        setShowResumeModal(true);
-      } else {
+      try {
+        // ボタンが押されたタイミングで最新の進行中のゲーム情報をAPIから取得してチェックする
+        const res = await activeGameQuery.refetch();
+        if (res.data?.activeGameId) {
+          setShowResumeModal(true);
+        } else {
+          setShowTitleSelect(true);
+        }
+      } catch (err) {
+        console.error("Failed to check active game:", err);
+        // エラー時のフォールバックとしてタイトル選択へ
         setShowTitleSelect(true);
       }
     } else {
