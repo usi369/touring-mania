@@ -58,6 +58,83 @@ async function checkGameIntegrity(db: any, gameId: number, caller: string) {
   }
 }
 
+/** 膠着状態（山札がすべて空かつ、全プレイヤーが出せるカードを1枚も持っていない）を検知してゲームを終了する */
+async function checkAndHandleDeadlock(db: any, gameId: number): Promise<boolean> {
+  try {
+    const gameRecord = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
+    if (!gameRecord.length || gameRecord[0].status === 'finished') return false;
+    const game = gameRecord[0];
+
+    // 1. 山札の残り枚数チェック
+    const gameDecks = await db.select().from(decks).where(eq(decks.gameId, gameId));
+    const totalDeckCards = gameDecks.reduce((sum: number, d: any) => {
+      const ids = typeof d.bikeIds === 'string' ? JSON.parse(d.bikeIds) : d.bikeIds || [];
+      return sum + ids.length;
+    }, 0);
+    if (totalDeckCards > 0) return false; // 山札があるなら膠着ではない
+
+    // 2. 場札のチェック
+    const field = await db.select().from(playedCards)
+      .where(and(eq(playedCards.gameId, gameId), gt(playedCards.playerId, -1)))
+      .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+      .limit(1);
+    if (field.length === 0) return false; // 場が流れているなら、親は何でも出せるので膠着ではない
+
+    const lastBikeIds: number[] = JSON.parse(field[0].bikeIds);
+    const lastBikeRecord = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds)).limit(1);
+    if (lastBikeRecord.length === 0) return false;
+    const lastBike = lastBikeRecord[0];
+
+    // 3. 全プレイヤーの手札チェック
+    const playerStates = await db.select().from(gameStates).where(eq(gameStates.gameId, gameId));
+    
+    // 手札があるプレイヤー全員
+    const activePlayers = playerStates.filter((ps: any) => {
+      const hand = typeof ps.hand === 'string' ? JSON.parse(ps.hand) : ps.hand || [];
+      return hand.length > 0;
+    });
+
+    if (activePlayers.length === 0) return false; // 全員手札がないなら膠着ではない
+
+    // 各プレイヤーの手札のバイクが出せるかチェック
+    for (const ps of activePlayers) {
+      const handIds: number[] = typeof ps.hand === 'string' ? JSON.parse(ps.hand) : ps.hand || [];
+      if (handIds.length === 0) continue;
+      const handBikes = await db.select().from(bikes).where(inArray(bikes.id, handIds));
+      
+      for (const bike of handBikes) {
+        // 縛りルールチェック
+        const playable = canPlayCard(bike as any, lastBike as any, game.currentBind as any, game.bindValue);
+        if (playable) {
+          const specKey = game.declaredSpec as keyof typeof bike;
+          const bikeValue = specKey === 'cylinders' ? parseInt(bike[specKey] as string, 10) || 1 : (bike[specKey] as number) || 0;
+          const lastValue = specKey === 'cylinders' ? parseInt(lastBike[specKey] as string, 10) || 1 : (lastBike[specKey] as number) || 0;
+
+          let valueOk = false;
+          if (game.declaredDirection === 'up') {
+            valueOk = bikeValue >= lastValue;
+          } else {
+            valueOk = bikeValue <= lastValue;
+          }
+
+          if (valueOk) {
+            // 出せるカードが1枚でも存在すれば膠着ではない
+            return false;
+          }
+        }
+      }
+    }
+
+    // 出せるカードが誰もいない ＝ 膠着状態
+    console.log(`[DEADLOCK] Game ${gameId} is in deadlock. Ending game.`);
+    await db.update(games).set({ status: 'finished' }).where(eq(games.id, gameId));
+    return true;
+  } catch (error) {
+    console.error("[DEADLOCK] Error checking deadlock:", error);
+    return false;
+  }
+}
+
 export const gameRouter = router({
   /**
    * Create a new game
@@ -308,6 +385,11 @@ export const gameRouter = router({
           return { success: true, gameFinished: true, winner: input.playerId };
         }
 
+        const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+        if (isDeadlock) {
+          return { success: true, gameFinished: true, winner: null };
+        }
+
         // Next player
         const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
         let nextPlayer = getNextPlayer(input.playerId, game.playerCount, turnOrder);
@@ -412,7 +494,9 @@ export const gameRouter = router({
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
         }
 
-        return { success: true, nextPlayer, trickCleared };
+        const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+
+        return { success: true, nextPlayer, trickCleared, gameFinished: isDeadlock };
       } catch (error) {
         console.error("Error passing:", error);
         throw error;
@@ -465,8 +549,10 @@ export const gameRouter = router({
 
         await checkGameIntegrity(db, input.gameId, 'DRAW_AFTER');
 
+        const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+
         const bike = await db.select().from(bikes).where(eq(bikes.id, drawnId)).limit(1);
-        return { success: true, drawnBike: bike[0], nextPlayer };
+        return { success: true, drawnBike: bike[0], nextPlayer, gameFinished: isDeadlock };
       } catch (error) {
         console.error("Error drawing card:", error);
         throw error;
@@ -559,7 +645,8 @@ export const gameRouter = router({
           const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
           await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
-          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId, bindDeclare: decision.bindDeclare };
+          const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId, bindDeclare: decision.bindDeclare, gameFinished: isDeadlock };
         } else if (decision.action === 'draw') {
            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
            const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
@@ -575,11 +662,79 @@ export const gameRouter = router({
              const newHand = [...handIds, drawnId];
              console.log(`[CPU] P${cpuPlayerId} hand AFTER draw: ${JSON.stringify(newHand)}`);
              await db.update(gameStates).set({ hand: JSON.stringify(newHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+             
+             const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
+             await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+             await checkGameIntegrity(db, input.gameId, 'CPU_DRAW_AFTER');
+             const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+             return { action: 'draw', nextPlayer, cpuPlayerId, gameFinished: isDeadlock };
+           } else {
+             console.log(`[CPU] P${cpuPlayerId} tried to draw but deck is empty. Auto-switching to pass.`);
+             await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+             
+             const cpuStateIndex = allStates.findIndex((s: any) => s.playerId === cpuPlayerId);
+             if (cpuStateIndex !== -1) allStates[cpuStateIndex].passed = 1;
+             const passedCount = allStates.filter((s: any) => s.passed === 1).length;
+             
+             const lastPlayedCard = await db
+               .select({ playerId: playedCards.playerId })
+               .from(playedCards)
+               .where(and(
+                 eq(playedCards.gameId, input.gameId),
+                 gt(playedCards.playerId, -1)
+               ))
+               .orderBy(desc(playedCards.playedAt), desc(playedCards.id))
+               .limit(1);
+
+             const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
+             const requiredPassedCount = hasPlayerPlayed ? game.playerCount - 1 : game.playerCount;
+
+             let nextPlayer;
+             let trickCleared = false;
+             
+             if (passedCount >= requiredPassedCount) {
+               trickCleared = true;
+               const winnerState = allStates.find((s: any) => s.passed === 0);
+               if (winnerState) {
+                 nextPlayer = winnerState.playerId;
+               } else {
+                 if (lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0) {
+                   nextPlayer = lastPlayedCard[0].playerId;
+                 } else {
+                   nextPlayer = cpuPlayerId === 1 ? 2 : 1;
+                 }
+               }
+
+               await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
+
+               await db
+                 .update(playedCards)
+                 .set({
+                   playerId: sql`CASE WHEN playerId = 0 THEN -100 ELSE -playerId END`
+                 })
+                 .where(and(
+                   eq(playedCards.gameId, input.gameId),
+                   gt(playedCards.playerId, -1)
+                 ));
+
+               await db.update(games).set({ 
+                 currentBind: null,
+                 bindValue: null,
+                 prevDeclaredSpec: game.declaredSpec,
+                 prevDeclaredDirection: game.declaredDirection,
+                 declaredSpec: null,
+                 declaredDirection: null,
+                 declarationPlayer: nextPlayer,
+                 currentTurn: nextPlayer 
+               }).where(eq(games.id, input.gameId));
+             } else {
+               nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
+               await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+             }
+             
+             const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+             return { action: 'pass', nextPlayer, trickCleared, cpuPlayerId, gameFinished: isDeadlock };
            }
-           const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
-           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
-           await checkGameIntegrity(db, input.gameId, 'CPU_DRAW_AFTER');
-           return { action: 'draw', nextPlayer, cpuPlayerId };
         } else {
            console.log(`[CPU] P${cpuPlayerId} passes`);
            await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
@@ -645,7 +800,8 @@ export const gameRouter = router({
              await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
            }
            
-           return { action: 'pass', nextPlayer, trickCleared, cpuPlayerId };
+           const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+           return { action: 'pass', nextPlayer, trickCleared, cpuPlayerId, gameFinished: isDeadlock };
         }
       } catch (error) {
         console.error("CPU Play error:", error);

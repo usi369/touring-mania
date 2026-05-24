@@ -291,7 +291,10 @@ export default function GameBoard() {
 
         if (result.trickCleared) addLog('場が流れました！', 'success');
         if (result.gameFinished) {
-          setGameResult({ winnerId: result.winner, winnerName: `Player ${result.winner}` });
+          setGameResult({ 
+            winnerId: result.winner, 
+            winnerName: result.winner ? `Player ${result.winner}` : "膠着状態" 
+          });
           setGamePhase('finished');
         }
       } catch (error: any) {
@@ -435,11 +438,21 @@ export default function GameBoard() {
         </div>
       ) : gamePhase === 'finished' ? (
         <GameResultScreen
-          rankings={gameState.players.map((p: any) => ({
-            playerId: p.playerId,
-            name: p.playerId === 1 ? "You" : `Player ${p.playerId}`,
-            remainingCards: p.hand.length,
-          })).sort((a: any, b: any) => a.remainingCards - b.remainingCards).map((r: any, i: number) => ({ ...r, rank: i + 1 }))}
+          rankings={(() => {
+            const sorted = gameState.players.map((p: any) => ({
+              playerId: p.playerId,
+              name: p.playerId === 1 ? "You" : `Player ${p.playerId}`,
+              remainingCards: p.hand.length,
+            })).sort((a: any, b: any) => a.remainingCards - b.remainingCards);
+
+            let currentRank = 1;
+            return sorted.map((player: any, index: number) => {
+              if (index > 0 && player.remainingCards > sorted[index - 1].remainingCards) {
+                currentRank = index + 1;
+              }
+              return { ...player, rank: currentRank };
+            });
+          })()}
           playerCount={gameState.game.playerCount}
           onReplay={() => { clearToasts(); setLocation("/game/setup"); }}
           onHome={() => { clearToasts(); setLocation("/"); }}
@@ -604,12 +617,16 @@ export default function GameBoard() {
                     bindValue={gameState.game.bindValue}
                     isYourTurn={gameState.game.currentTurn === 1 && gamePhase === 'playing'}
                     fieldCards={gameState.fieldCards || []}
+                    isDeckEmpty={((gameState.deckCounts?.large || 0) + (gameState.deckCounts?.medium || 0) + (gameState.deckCounts?.small || 0)) === 0}
                     onCardPlay={async (ids, bind) => {
                       const playedBikes = ids.map((id: number) => playerHand?.find((b: any) => b.id === id) || gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
                       const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
                       const res = await playCardMutation.mutateAsync({ gameId: gameId!, playerId: 1, bikeIds: ids, bindDeclare: bind });
                       if (res.gameFinished) {
-                        setGameResult({ winnerId: res.winner, winnerName: res.winner === 1 ? 'You' : `Player ${res.winner}` });
+                        setGameResult({ 
+                          winnerId: res.winner, 
+                          winnerName: res.winner === 1 ? 'You' : res.winner ? `Player ${res.winner}` : '膠着状態' 
+                        });
                         setGamePhase('finished');
                       }
                       await getStateQuery.refetch();
@@ -617,6 +634,10 @@ export default function GameBoard() {
                     }}
                     onPass={async () => {
                       const res = await passMutation.mutateAsync({ gameId: gameId!, playerId: 1 });
+                      if (res.gameFinished) {
+                        setGameResult({ winnerId: null, winnerName: "膠着状態" });
+                        setGamePhase('finished');
+                      }
                       await getStateQuery.refetch();
                       addLog('パスしました', 'info');
                       if (res.trickCleared) addLog('場が流れました！', 'success');
@@ -625,6 +646,10 @@ export default function GameBoard() {
                       console.log('[onDraw] Starting draw mutation...');
                       const res = await drawCardMutation.mutateAsync({ gameId: gameId!, playerId: 1 });
                       console.log('[onDraw] Result:', res);
+                      if (res.gameFinished) {
+                        setGameResult({ winnerId: null, winnerName: "膠着状態" });
+                        setGamePhase('finished');
+                      }
                       if (res.drawnBike) {
                         setDrawnBikeForAnimation(res.drawnBike);
                         setShowDrawAnimation(true);

@@ -14,6 +14,7 @@ interface CardPlayPhaseProps {
   bindValue?: string;
   isYourTurn: boolean;
   fieldCards?: any[];
+  isDeckEmpty?: boolean;
   onCardPlay: (bikeIds: number[], bindDeclare?: any) => Promise<void>;
   onPass: () => Promise<void>;
   onDraw: () => Promise<void>;
@@ -63,6 +64,7 @@ export default function CardPlayPhase({
   bindValue,
   isYourTurn,
   fieldCards = [],
+  isDeckEmpty = false,
   onCardPlay,
   onPass,
   onDraw,
@@ -424,7 +426,7 @@ export default function CardPlayPhase({
             >
               スキップ
             </Button>
-            {!hasDrawn && (
+            {!hasDrawn && !isDeckEmpty && (
               <Button
                 variant="outline"
                 className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800 text-xs sm:text-sm py-2 sm:py-2.5"
