@@ -98,8 +98,8 @@ export default function DeclarationPhase({
                     <div
                       className="relative overflow-hidden rounded-xl border border-white/10 group-hover:border-cyan-400/70 transition-all duration-300"
                       style={{
-                        width: "60px",
-                        height: "60px",
+                        width: "80px",
+                        height: "80px",
                         background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08))",
                         boxShadow: "0 0 0 0 rgba(34,211,238,0)",
                       }}
@@ -134,8 +134,8 @@ export default function DeclarationPhase({
                     </div>
                     {/* バイク名 */}
                     <span
-                      className="text-[8px] font-bold text-white/60 group-hover:text-cyan-300 transition-colors duration-200 text-center leading-tight truncate"
-                      style={{ maxWidth: "60px" }}
+                      className="text-[9px] font-bold text-white/60 group-hover:text-cyan-300 transition-colors duration-200 text-center leading-tight truncate"
+                      style={{ maxWidth: "80px" }}
                     >
                       {bike.name}
                     </span>
