@@ -232,6 +232,25 @@ export default function GameBoard() {
         
         if (!active) return;
 
+        if (result.drewCard) {
+          const drawActionId = nanoid();
+          setCpuActionNotify({
+            id: drawActionId,
+            playerId: result.cpuPlayerId,
+            actionType: 'draw',
+          });
+          addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
+          
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              if (active) resolve(null);
+              else reject(new Error("Cancelled"));
+            }, 1200);
+          });
+          if (!active) return;
+          setCpuActionNotify(prev => (prev?.id === drawActionId ? null : prev));
+        }
+
         if (result.action === 'play') {
           const playedBikes = result.bikeIds
             ? result.bikeIds.map((id: number) => gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean)
@@ -268,22 +287,31 @@ export default function GameBoard() {
             addLog(`Player ${result.cpuPlayerId} が ${label}縛り を発動しました！`, 'warning');
           }
         } else {
-          if (result.action === 'draw' || result.action === 'pass') {
+          // すでに引いていて出せなかった場合は、ここでさらにパス通知を表示する
+          if (result.action === 'pass') {
+            const passActionId = nanoid();
+            setCpuActionNotify({
+              id: passActionId,
+              playerId: result.cpuPlayerId,
+              actionType: 'pass',
+            });
+            addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
+            
+            setTimeout(() => {
+              setCpuActionNotify(prev => (prev?.id === passActionId ? null : prev));
+            }, 1200);
+          } else if (result.action === 'draw') {
+            // もし drewCard を経由せず draw のみ返ってきた場合（通常は無いはずですが念のため）
             const actionId = nanoid();
             setCpuActionNotify({
               id: actionId,
               playerId: result.cpuPlayerId,
-              actionType: result.action,
+              actionType: 'draw',
             });
+            addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
             setTimeout(() => {
               setCpuActionNotify(prev => (prev?.id === actionId ? null : prev));
             }, 1200);
-
-            if (result.action === 'draw') {
-              addLog(`Player ${result.cpuPlayerId} がカードを引きました`, 'info');
-            } else if (result.action === 'pass') {
-              addLog(`Player ${result.cpuPlayerId} がパスしました`, 'info');
-            }
           }
           // play以外の時は通常通り最新状態を取得
           await getStateQuery.refetch();

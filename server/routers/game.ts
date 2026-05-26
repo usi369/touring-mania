@@ -663,11 +663,114 @@ export const gameRouter = router({
              console.log(`[CPU] P${cpuPlayerId} hand AFTER draw: ${JSON.stringify(newHand)}`);
              await db.update(gameStates).set({ hand: JSON.stringify(newHand) as any }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
              
-             const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
-             await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
-             await checkGameIntegrity(db, input.gameId, 'CPU_DRAW_AFTER');
-             const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
-             return { action: 'draw', nextPlayer, cpuPlayerId, gameFinished: isDeadlock };
+             // カードを引いた後の新しい手札で再度プレイ意思決定を行う
+             const newHandBikes = await db.select().from(bikes).where(inArray(bikes.id, newHand));
+             const secondDecision = decideCPUAction(newHandBikes as any, lastBikes, game.declaredSpec as any, game.declaredDirection as any, game.currentBind as any, game.bindValue as any);
+             console.log(`[CPU] P${cpuPlayerId} SECOND decision after draw: ${secondDecision.action}`);
+             
+             const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
+             
+             // 再評価の結果カードを出せる場合
+             if (secondDecision.action === 'play' && secondDecision.bikeIds) {
+               console.log(`[CPU] P${cpuPlayerId} plays after draw: ${JSON.stringify(secondDecision.bikeIds)}`);
+               const updatedHand = newHand.filter((id: number) => !secondDecision.bikeIds!.includes(id));
+               await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+               
+               await db.insert(playedCards).values({ 
+                 gameId: input.gameId, 
+                 playerId: cpuPlayerId, 
+                 bikeIds: JSON.stringify(secondDecision.bikeIds),
+                 declaredSpec: game.declaredSpec,
+                 declaredDirection: game.declaredDirection,
+                 bindType: secondDecision.bindDeclare ? secondDecision.bindDeclare.type : game.currentBind,
+                 bindValue: secondDecision.bindDeclare ? secondDecision.bindDeclare.value : game.bindValue,
+               });
+               
+               if (secondDecision.bindDeclare) {
+                 await db.update(games).set({ currentBind: secondDecision.bindDeclare.type, bindValue: secondDecision.bindDeclare.value }).where(eq(games.id, input.gameId));
+               }
+               
+               if (updatedHand.length === 0) {
+                 await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
+                 await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
+                 return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: secondDecision.bindDeclare, drewCard: true };
+               }
+               
+               const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
+               await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+               await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
+               const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+               return { action: 'play', nextPlayer, bikeIds: secondDecision.bikeIds, cpuPlayerId, bindDeclare: secondDecision.bindDeclare, gameFinished: isDeadlock, drewCard: true };
+             } 
+             
+             // 再評価の結果カードを出せない場合はパス
+             else {
+               console.log(`[CPU] P${cpuPlayerId} passes after draw`);
+               await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
+               
+               const cpuStateIndex = allStates.findIndex((s: any) => s.playerId === cpuPlayerId);
+               if (cpuStateIndex !== -1) allStates[cpuStateIndex].passed = 1;
+               const passedCount = allStates.filter((s: any) => s.passed === 1).length;
+               
+               const lastPlayedCard = await db
+                 .select({ playerId: playedCards.playerId })
+                 .from(playedCards)
+                 .where(and(
+                   eq(playedCards.gameId, input.gameId),
+                   gt(playedCards.playerId, -1)
+                 ))
+                 .orderBy(desc(playedCards.id))
+                 .limit(1);
+
+               const hasPlayerPlayed = lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0;
+               const requiredPassedCount = hasPlayerPlayed ? game.playerCount - 1 : game.playerCount;
+
+               let nextPlayer;
+               let trickCleared = false;
+               
+               if (passedCount >= requiredPassedCount) {
+                 trickCleared = true;
+                 const winnerState = allStates.find((s: any) => s.passed === 0);
+                 if (winnerState) {
+                   nextPlayer = winnerState.playerId;
+                 } else {
+                   if (lastPlayedCard.length > 0 && lastPlayedCard[0].playerId > 0) {
+                     nextPlayer = lastPlayedCard[0].playerId;
+                   } else {
+                     nextPlayer = cpuPlayerId === 1 ? 2 : 1;
+                   }
+                 }
+
+                 await db.update(gameStates).set({ passed: 0 }).where(eq(gameStates.gameId, input.gameId));
+
+                 await db
+                   .update(playedCards)
+                   .set({
+                     playerId: sql`CASE WHEN playerId = 0 THEN -100 ELSE -playerId END`
+                   })
+                   .where(and(
+                     eq(playedCards.gameId, input.gameId),
+                     gt(playedCards.playerId, -1)
+                   ));
+
+                 await db.update(games).set({ 
+                   currentBind: null,
+                   bindValue: null,
+                   prevDeclaredSpec: game.declaredSpec,
+                   prevDeclaredDirection: game.declaredDirection,
+                   declaredSpec: null,
+                   declaredDirection: null,
+                   declarationPlayer: nextPlayer,
+                   currentTurn: nextPlayer 
+                 }).where(eq(games.id, input.gameId));
+               } else {
+                 nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
+                 await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
+               }
+               
+               const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
+               return { action: 'pass', nextPlayer, trickCleared, cpuPlayerId, gameFinished: isDeadlock, drewCard: true };
+             }
            } else {
              console.log(`[CPU] P${cpuPlayerId} tried to draw but deck is empty. Auto-switching to pass.`);
              await db.update(gameStates).set({ passed: 1 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
