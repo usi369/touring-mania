@@ -276,17 +276,6 @@ export default function Home() {
           )}
         </Button>
 
-        {isAuthenticated && (
-          <Button
-            onClick={logout}
-            variant="outline"
-            className="w-full h-12 text-base font-semibold border-pink-500/30 text-pink-400 hover:bg-pink-950/20 hover:text-pink-300 transition-all duration-300"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            ログアウト
-          </Button>
-        )}
-
         {/* Guest Mode Button */}
         <Button
           onClick={handleGuestMode}
@@ -327,6 +316,17 @@ export default function Home() {
           <HelpCircle className="w-4 h-4 mr-2" />
           ルール説明
         </Button>
+
+        {isAuthenticated && (
+          <Button
+            onClick={logout}
+            variant="outline"
+            className="w-full h-12 text-base font-semibold border-pink-500/30 text-pink-400 hover:bg-pink-950/20 hover:text-pink-300 transition-all duration-300"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            ログアウト
+          </Button>
+        )}
       </div>
 
       {/* Footer */}
