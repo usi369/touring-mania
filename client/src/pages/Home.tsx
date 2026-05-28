@@ -52,9 +52,15 @@ export default function Home() {
   const [showRules, setShowRules] = useState(false);
   const [showTitleSelect, setShowTitleSelect] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showNoGarageModal, setShowNoGarageModal] = useState(false);
   const createGuestSessionMutation = trpc.guest.createSession.useMutation();
   const bikesQuery = trpc.bike.list.useQuery();
   const bikeCount = bikesQuery.data?.length || 0;
+
+  // ログイン済みユーザーのガレージ情報を取得
+  const garageQuery = trpc.garage.getGarage.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   // OTP Authentication States
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -116,6 +122,11 @@ export default function Home() {
             setGeneratedCode("");
             setIgnitionState("off");
             setHasClickedSent(false);
+
+            // 新規ユーザーまたは愛車未設定の場合はセットアップ画面へ遷移
+            if (pollData.isNewUser || !pollData.hasGarageBike) {
+              setLocation("/setup-garage");
+            }
           });
         }, 1500);
         
@@ -132,6 +143,13 @@ export default function Home() {
       }
     }
   }, [pollData]);
+
+  // 既存ログイン済みユーザーで愛車が未設定の場合にモーダルを表示
+  useEffect(() => {
+    if (isAuthenticated && garageQuery.data && garageQuery.data.bike === null) {
+      setShowNoGarageModal(true);
+    }
+  }, [isAuthenticated, garageQuery.data]);
 
   const handleStartGame = async () => {
     if (isAuthenticated) {
@@ -337,6 +355,44 @@ export default function Home() {
 
       {/* Rules Screen Modal */}
       {showRules && <RulesScreen onClose={() => setShowRules(false)} />}
+
+      {/* 愛車未設定アナウンスモーダル（既存ログイン済みユーザー向け） */}
+      {showNoGarageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-orange-500/40 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-3">
+                <Warehouse className="w-6 h-6 text-orange-400" />
+              </div>
+              <h2 className="text-lg font-bold text-white mb-2">愛車が未登録です</h2>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                愛車を登録またはエントリー済みのバイクを選択してください。
+              </p>
+              <p className="text-orange-400 text-xs mt-2 leading-relaxed">
+                ※ バイク未登録の場合、ランキングやガレージの機能が一部使用できません。
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => {
+                  setShowNoGarageModal(false);
+                  setLocation("/setup-garage");
+                }}
+                className="w-full h-12 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-bold rounded-lg"
+              >
+                今すぐ設定する
+              </Button>
+              <Button
+                onClick={() => setShowNoGarageModal(false)}
+                variant="ghost"
+                className="w-full text-slate-400 hover:text-white text-sm"
+              >
+                あとで設定する
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Title Selection Modal */}
       {showTitleSelect && (

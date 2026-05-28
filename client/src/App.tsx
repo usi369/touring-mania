@@ -10,6 +10,7 @@ import GameBoard from "./pages/GameBoard";
 import ComingSoon from "./pages/ComingSoon";
 import Encyclopedia from "./pages/Encyclopedia";
 import MyGarage from "./pages/MyGarage";
+import SetupGarage from "./pages/SetupGarage";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -21,6 +22,7 @@ function Router() {
       <Route path={"/coming-soon"} component={ComingSoon} />
       <Route path={"/encyclopedia"} component={Encyclopedia} />
       <Route path={"/my-garage"} component={MyGarage} />
+      <Route path={"/setup-garage"} component={SetupGarage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

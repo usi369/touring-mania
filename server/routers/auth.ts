@@ -82,10 +82,12 @@ export const authRouter = router({
 
           // Fetch or auto-provision user
           let user = await db.getUserByEmail(email);
+          let isNewUser = false;
 
           if (!user) {
             console.log(`[AUTH] Registering new user for email: ${email}`);
             const defaultName = email.split("@")[0] || "User";
+            isNewUser = true;
             
             await db.upsertUser({
               openId: email,
@@ -105,6 +107,10 @@ export const authRouter = router({
             });
           }
 
+          // 愛車設定の有無をチェック
+          const garageRecord = await db.getUserGarage(user.id);
+          const hasGarageBike = !!garageRecord;
+
           // Generate custom JWT token
           const token = await generateToken({
             userId: user.id,
@@ -123,6 +129,8 @@ export const authRouter = router({
             status: "success" as const,
             token,
             user,
+            isNewUser,
+            hasGarageBike,
           };
         }
 
