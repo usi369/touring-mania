@@ -24,16 +24,20 @@ export function canWinWithBike(
 ): boolean {
   if (playedBikes.length === 0) return true;
 
-  const lastBike = playedBikes[playedBikes.length - 1];
-  
-  // Get spec values
   const specKey = declaredSpec as keyof Bike;
-  const bikeValue = specKey === 'cylinders' 
-    ? parseInt(bike[specKey] as string, 10) || 1 
-    : Number(bike[specKey]) || 0;
-  const lastValue = specKey === 'cylinders' 
-    ? parseInt(lastBike[specKey] as string, 10) || 1 
-    : Number(lastBike[specKey]) || 0;
+  const getBikeVal = (b: Bike): number =>
+    specKey === 'cylinders'
+      ? parseInt(b[specKey] as string, 10) || 1
+      : Number(b[specKey]) || 0;
+
+  const bikeValue = getBikeVal(bike);
+
+  // 複数枚出しの場合は方向に対して最も厳しい値（upなら最大値、downなら最小値）を基準にする
+  const lastValues = playedBikes.map(getBikeVal);
+  const lastValue =
+    declaredDirection === 'up'
+      ? Math.max(...lastValues)
+      : Math.min(...lastValues);
 
   if (declaredDirection === 'up') {
     return bikeValue >= lastValue;

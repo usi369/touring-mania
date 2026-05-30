@@ -357,6 +357,55 @@ export const gameRouter = router({
         const hand = typeof playerState[0].hand === 'string' ? JSON.parse(playerState[0].hand) : playerState[0].hand || [];
         console.log(`[PLAY] P${input.playerId} hand BEFORE: ${JSON.stringify(hand)}`);
 
+        // ---- サーバー側バリデーション ----
+        // 1. 手札にないカードが含まれていないかチェック
+        for (const id of input.bikeIds) {
+          if (!hand.includes(id)) throw new Error(`Card ${id} is not in player hand`);
+        }
+
+        // 2. 宣言スペックの値バリデーション（場にアクティブカードがある場合）
+        if (game.declaredSpec && game.declaredDirection) {
+          const lastPlayedRecord = await db
+            .select()
+            .from(playedCards)
+            .where(and(eq(playedCards.gameId, input.gameId), gt(playedCards.playerId, -1)))
+            .orderBy(desc(playedCards.id))
+            .limit(1);
+
+          if (lastPlayedRecord.length > 0) {
+            const lastBikeIds: number[] = JSON.parse(lastPlayedRecord[0].bikeIds);
+            const lastBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds));
+
+            if (lastBikeRecords.length > 0) {
+              const specKey = game.declaredSpec as keyof typeof lastBikeRecords[0];
+
+              // 複数枚出しの場合、代表値として最も高い/低い値を使う
+              const getRepresentativeValue = (bikeList: any[]): number => {
+                const vals = bikeList.map((b: any) => {
+                  return specKey === 'cylinders'
+                    ? parseInt(b[specKey] as string, 10) || 1
+                    : Number(b[specKey]) || 0;
+                });
+                return game.declaredDirection === 'up' ? Math.max(...vals) : Math.min(...vals);
+              };
+
+              const lastValue = getRepresentativeValue(lastBikeRecords);
+
+              // プレイしようとしているカードを取得して値チェック
+              const playedBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, input.bikeIds));
+              const playValue = getRepresentativeValue(playedBikeRecords);
+
+              if (game.declaredDirection === 'up' && playValue < lastValue) {
+                throw new Error(`[RULE VIOLATION] P${input.playerId} tried to play ${game.declaredSpec}=${playValue} but last card was ${lastValue} (direction: up). bikeIds=${JSON.stringify(input.bikeIds)}`);
+              }
+              if (game.declaredDirection === 'down' && playValue > lastValue) {
+                throw new Error(`[RULE VIOLATION] P${input.playerId} tried to play ${game.declaredSpec}=${playValue} but last card was ${lastValue} (direction: down). bikeIds=${JSON.stringify(input.bikeIds)}`);
+              }
+            }
+          }
+        }
+        // ---- バリデーション終わり ----
+
         // Update player hand
         const updatedHand = hand.filter((id: number) => !input.bikeIds.includes(id));
         console.log(`[PLAY] P${input.playerId} hand AFTER: ${JSON.stringify(updatedHand)}`);
