@@ -25,6 +25,11 @@ export default function MyGarage() {
     enabled: isAuthenticated && shutterState === "open",
   });
 
+  // タイトルごとの成績を取得
+  const statsQuery = trpc.game.getMyStats.useQuery(undefined, {
+    enabled: isAuthenticated && shutterState === "open",
+  });
+
   // Query to get all bikes for selection
   const bikesQuery = trpc.bike.list.useQuery();
   const setGarageBikeMutation = trpc.garage.setGarageBike.useMutation();
@@ -522,6 +527,96 @@ export default function MyGarage() {
                   <p className="text-[8px] text-slate-600 font-mono tracking-widest text-center">
                     TOURING MANIA // GARAGE SYSTEM v2.0
                   </p>
+                </div>
+              </div>
+
+              {/* 成績サイネージパネル */}
+              <div className="relative bg-slate-900/80 border border-purple-500/20 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(168,85,247,0.05)]">
+                {/* スキャンライン */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[size:100%_4px] pointer-events-none opacity-30 z-10" />
+                {/* グリッドオーバーレイ */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(168,85,247,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(168,85,247,0.03)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none z-10" />
+
+                {/* ヘッダーバー */}
+                <div className="relative z-20 px-4 py-2 border-b border-purple-500/15 bg-purple-500/5 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shadow-[0_0_6px_rgba(168,85,247,0.8)]" />
+                  <span className="text-[9px] font-black text-purple-400 tracking-[0.3em] uppercase">Win Records</span>
+                  <div className="ml-auto flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                  </div>
+                </div>
+
+                {/* 成績ボディ */}
+                <div className="relative z-20 p-4 space-y-3">
+                  {statsQuery.isLoading ? (
+                    <div className="flex items-center justify-center py-4 gap-2">
+                      <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[9px] text-slate-500 font-mono tracking-widest">LOADING...</span>
+                    </div>
+                  ) : (() => {
+                    const EDITION_LABELS: Record<string, { label: string; short: string; color: string; glow: string }> = {
+                      r7_starter:   { label: "R7 スターター",      short: "R7-S", color: "text-cyan-400",   glow: "bg-cyan-400" },
+                      tokyo_remake: { label: "東京リメイク",        short: "TKY",  color: "text-pink-400",   glow: "bg-pink-400" },
+                      r6_complete:  { label: "R6 コンプリート",     short: "R6-C", color: "text-purple-400", glow: "bg-purple-400" },
+                      r7_mega:      { label: "R7 メガ",            short: "R7-M", color: "text-amber-400",  glow: "bg-amber-400" },
+                    };
+                    const stats = statsQuery.data?.stats || [];
+                    const totalWins = stats.reduce((s, r) => s + r.wins, 0);
+                    const totalPlayed = stats.reduce((s, r) => s + r.played, 0);
+
+                    return (
+                      <>
+                        {/* トータルサマリー */}
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <div className="bg-slate-950/60 border border-yellow-500/20 rounded-lg p-2 text-center">
+                            <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Total Wins</p>
+                            <p className="text-xl font-black text-yellow-400 leading-none">{totalWins}<span className="text-[9px] text-slate-500 ml-1">回</span></p>
+                          </div>
+                          <div className="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2 text-center">
+                            <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Total Games</p>
+                            <p className="text-xl font-black text-white leading-none">{totalPlayed}<span className="text-[9px] text-slate-500 ml-1">戦</span></p>
+                          </div>
+                        </div>
+
+                        <div className="h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+
+                        {/* タイトルごと */}
+                        <div className="space-y-2.5">
+                          {stats.map((row) => {
+                            const meta = EDITION_LABELS[row.edition];
+                            if (!meta) return null;
+                            return (
+                              <div key={row.edition}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${meta.color} border-current/30 bg-current/5 tracking-wider`}>{meta.short}</span>
+                                    <span className="text-[9px] text-slate-400 font-bold">{meta.label}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className={`text-xs font-black ${meta.color}`}>{row.wins}</span>
+                                    <span className="text-[9px] text-slate-600">/ {row.played}戦</span>
+                                  </div>
+                                </div>
+                                {/* 勝率バー */}
+                                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-700 ${meta.glow} opacity-80`}
+                                    style={{ width: `${row.winRate}%` }}
+                                  />
+                                </div>
+                                <p className="text-[8px] text-slate-600 font-mono text-right mt-0.5">{row.winRate}%</p>
+                              </div>
+                            );
+                          })}
+                          {totalPlayed === 0 && (
+                            <p className="text-[9px] text-slate-600 font-mono text-center py-2">-- NO RECORDS --</p>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

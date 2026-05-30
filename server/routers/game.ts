@@ -952,6 +952,67 @@ export const gameRouter = router({
     }),
 
   /**
+   * Get win stats per edition for the logged-in user (playerId=1 = human player)
+   */
+  getMyStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const userId = ctx.user.id;
+
+        // ログインユーザーが作成した終了済みゲームを全件取得
+        const finishedGames = await db
+          .select({ id: games.id, edition: games.edition })
+          .from(games)
+          .where(and(eq(games.userId, userId), eq(games.status, "finished")));
+
+        if (finishedGames.length === 0) {
+          return { stats: [] };
+        }
+
+        const gameIds = finishedGames.map((g: any) => g.id);
+
+        // 人間プレイヤー（playerId=1）の順位を取得
+        const humanStates = await db
+          .select({ gameId: gameStates.gameId, rank: gameStates.rank })
+          .from(gameStates)
+          .where(and(inArray(gameStates.gameId, gameIds), eq(gameStates.playerId, 1)));
+
+        // ゲームIDとエディションのマップ作成
+        const editionMap = new Map<number, string>();
+        finishedGames.forEach((g: any) => editionMap.set(g.id, g.edition));
+
+        // エディションごとに集計
+        const editionStats = new Map<string, { played: number; wins: number }>();
+
+        const EDITIONS = ["r7_starter", "tokyo_remake", "r6_complete", "r7_mega"] as const;
+        EDITIONS.forEach((e) => editionStats.set(e, { played: 0, wins: 0 }));
+
+        humanStates.forEach((s: any) => {
+          const edition = editionMap.get(s.gameId);
+          if (!edition) return;
+          const stat = editionStats.get(edition) || { played: 0, wins: 0 };
+          stat.played += 1;
+          if (s.rank === 1) stat.wins += 1;
+          editionStats.set(edition, stat);
+        });
+
+        const stats = EDITIONS.map((edition) => {
+          const s = editionStats.get(edition) || { played: 0, wins: 0 };
+          const winRate = s.played > 0 ? Math.round((s.wins / s.played) * 100) : 0;
+          return { edition, played: s.played, wins: s.wins, winRate };
+        });
+
+        return { stats };
+      } catch (error) {
+        console.error("Error getting my stats:", error);
+        throw error;
+      }
+    }),
+
+  /**
    * Get active game for the current logged-in user
    */
   getActiveGame: publicProcedure
