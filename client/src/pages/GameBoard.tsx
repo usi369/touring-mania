@@ -721,7 +721,7 @@ export default function GameBoard() {
               initial={{ scale: 0.3, opacity: 0, rotateY: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.5, opacity: 0 }}
-              className="relative w-full max-w-[320px] aspect-[2/3] perspective-1000"
+              className="relative w-52 h-[490px] perspective-1000"
             >
               <motion.div
                 initial={{ rotateY: 0 }}
@@ -747,7 +747,7 @@ export default function GameBoard() {
                 </div>
                 {/* Front */}
                 <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(34,211,238,0.4)]" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                  <BikeCard bike={drawnBikeForAnimation} size="large" showDetails={true} isPokerRatio={true} />
+                  <BikeCard bike={drawnBikeForAnimation} size="large" showDetails={true} />
                 </div>
               </motion.div>
             </motion.div>
