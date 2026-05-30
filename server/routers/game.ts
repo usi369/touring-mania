@@ -952,6 +952,60 @@ export const gameRouter = router({
     }),
 
   /**
+   * Save final rankings to gameStates after game ends
+   * Called by the client when gameFinished = true
+   */
+  saveRanks: publicProcedure
+    .input(z.object({ gameId: z.number() }))
+    .mutation(async ({ input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // 全プレイヤーの手札を取得
+        const playerStates = await db
+          .select({ playerId: gameStates.playerId, hand: gameStates.hand })
+          .from(gameStates)
+          .where(eq(gameStates.gameId, input.gameId));
+
+        if (playerStates.length === 0) return { success: false };
+
+        // 手札枚数を計算（少ない順 = 上位）
+        const withCount = playerStates.map((s: any) => {
+          const hand: number[] = typeof s.hand === "string" ? JSON.parse(s.hand) : s.hand || [];
+          return { playerId: s.playerId, count: hand.length };
+        });
+
+        // 手札枚数で昇順ソート
+        withCount.sort((a: any, b: any) => a.count - b.count);
+
+        // 同枚数は同順位
+        let currentRank = 1;
+        const rankAssignments: { playerId: number; rank: number }[] = [];
+        for (let i = 0; i < withCount.length; i++) {
+          if (i > 0 && withCount[i].count > withCount[i - 1].count) {
+            currentRank = i + 1;
+          }
+          rankAssignments.push({ playerId: withCount[i].playerId, rank: currentRank });
+        }
+
+        // DBへ書き込み
+        for (const { playerId, rank } of rankAssignments) {
+          await db
+            .update(gameStates)
+            .set({ rank })
+            .where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, playerId)));
+        }
+
+        console.log(`[RANK] Game ${input.gameId} ranks saved:`, rankAssignments);
+        return { success: true, ranks: rankAssignments };
+      } catch (error) {
+        console.error("Error saving ranks:", error);
+        throw error;
+      }
+    }),
+
+  /**
    * Get win stats per edition for the logged-in user (playerId=1 = human player)
    */
   getMyStats: protectedProcedure

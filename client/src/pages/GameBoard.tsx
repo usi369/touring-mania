@@ -112,6 +112,7 @@ export default function GameBoard() {
   const drawCardMutation = trpc.game.drawCard.useMutation();
   const cpuPlayMutation = trpc.game.cpuPlay.useMutation();
   const terminateMutation = trpc.game.terminate.useMutation();
+  const saveRanksMutation = trpc.game.saveRanks.useMutation();
   const utils = trpc.useUtils();
   const [cpuProcessing, setCpuProcessing] = useState(false);
   const cpuProcessingRef = useRef(false);
@@ -319,6 +320,7 @@ export default function GameBoard() {
 
         if (result.trickCleared) addLog('場が流れました！', 'success');
         if (result.gameFinished) {
+          try { await saveRanksMutation.mutateAsync({ gameId }); } catch (e) { console.error('[RANK] saveRanks failed:', e); }
           setGameResult({ 
             winnerId: result.winner, 
             winnerName: result.winner ? `Player ${result.winner}` : "膠着状態" 
@@ -651,6 +653,7 @@ export default function GameBoard() {
                       const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
                       const res = await playCardMutation.mutateAsync({ gameId: gameId!, playerId: 1, bikeIds: ids, bindDeclare: bind });
                       if (res.gameFinished) {
+                        try { await saveRanksMutation.mutateAsync({ gameId: gameId! }); } catch (e) { console.error('[RANK] saveRanks failed:', e); }
                         setGameResult({ 
                           winnerId: res.winner, 
                           winnerName: res.winner === 1 ? 'You' : res.winner ? `Player ${res.winner}` : '膠着状態' 
@@ -663,6 +666,7 @@ export default function GameBoard() {
                     onPass={async () => {
                       const res = await passMutation.mutateAsync({ gameId: gameId!, playerId: 1 });
                       if (res.gameFinished) {
+                        try { await saveRanksMutation.mutateAsync({ gameId: gameId! }); } catch (e) { console.error('[RANK] saveRanks failed:', e); }
                         setGameResult({ winnerId: null, winnerName: "膠着状態" });
                         setGamePhase('finished');
                       }
@@ -675,6 +679,7 @@ export default function GameBoard() {
                       const res = await drawCardMutation.mutateAsync({ gameId: gameId!, playerId: 1 });
                       console.log('[onDraw] Result:', res);
                       if (res.gameFinished) {
+                        try { await saveRanksMutation.mutateAsync({ gameId: gameId! }); } catch (e) { console.error('[RANK] saveRanks failed:', e); }
                         setGameResult({ winnerId: null, winnerName: "膠着状態" });
                         setGamePhase('finished');
                       }
