@@ -321,6 +321,7 @@ export const gameRouter = router({
 
 
 
+
         return { success: true, spec: input.spec, direction: input.direction, nextPlayer };
       } catch (error) {
         console.error("Error declaring spec:", error);
@@ -522,6 +523,7 @@ export const gameRouter = router({
               eq(playedCards.gameId, input.gameId),
               gt(playedCards.playerId, -1)
             ));
+
 
           await db.update(games).set({ 
             currentBind: null, 
@@ -936,6 +938,7 @@ export const gameRouter = router({
                  eq(playedCards.gameId, input.gameId),
                  gt(playedCards.playerId, -1)
                ));
+
 
              await db.update(games).set({ 
                currentBind: null,
