@@ -442,42 +442,116 @@ export default function MyGarage() {
         {/* 3. OPEN GARAGE (Main Dashboard with Lightup Bike) */}
         {/* ======================================================== */}
         {shutterState === "open" && (
-          <div className="flex-1 w-full flex flex-col justify-between items-center p-4 sm:p-6 z-20 min-h-0">
-            {/* Spotlit background for the bike */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(34,211,238,0.18)_0%,transparent_60%)] pointer-events-none z-10" />
+          <div className="flex-1 w-full flex flex-col sm:flex-row z-20 min-h-0 gap-0">
+            {/* Spotlit background */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_35%,rgba(34,211,238,0.15)_0%,transparent_60%)] pointer-events-none z-10" />
 
-            <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 py-4 gap-6">
-              
+            {/* ---- 左カラム：デジタルサイネージ ---- */}
+            <div className="w-full sm:w-72 flex-shrink-0 z-20 flex flex-col gap-4 p-4 sm:p-5 border-b sm:border-b-0 sm:border-r border-cyan-500/10">
+
+              {/* プロフィールサイネージパネル */}
+              <div className="relative bg-slate-900/80 border border-cyan-500/20 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(34,211,238,0.06)]">
+                {/* スキャンライン演出 */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[size:100%_4px] pointer-events-none opacity-30 z-10" />
+                {/* グリッドオーバーレイ */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none z-10" />
+
+                {/* ヘッダーバー */}
+                <div className="relative z-20 px-4 py-2 border-b border-cyan-500/15 bg-cyan-500/5 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+                  <span className="text-[9px] font-black text-cyan-400 tracking-[0.3em] uppercase">Owner Profile</span>
+                  <div className="ml-auto flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/50" />
+                  </div>
+                </div>
+
+                {/* ボディ */}
+                <div className="relative z-20 p-4 space-y-4">
+                  {/* アバタープレースホルダー */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-lg bg-slate-950 border border-cyan-500/30 flex items-center justify-center shadow-[0_0_10px_rgba(34,211,238,0.1)]">
+                        <span className="text-2xl">🏍</span>
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-cyan-400 border-2 border-slate-900 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-0.5">Display Name</p>
+                      <p className="text-sm font-black text-white truncate leading-tight">
+                        {user?.name || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+
+                  {/* メールアドレス */}
+                  <div className="space-y-2">
+                    <div className="bg-slate-950/60 border border-slate-800/80 rounded-lg p-3">
+                      <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Email Address</p>
+                      <p className="text-[11px] font-mono text-cyan-300 truncate leading-tight">
+                        {user?.email || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
+
+                  {/* ステータス表示エリア（今後の拡張用） */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2 text-center">
+                      <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Role</p>
+                      <p className="text-[10px] font-black text-purple-400 uppercase">
+                        {user?.role === "admin" ? "Admin" : "Rider"}
+                      </p>
+                    </div>
+                    <div className="bg-slate-950/60 border border-slate-800/60 rounded-lg p-2 text-center">
+                      <p className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Status</p>
+                      <div className="flex items-center justify-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                        <p className="text-[10px] font-black text-green-400 uppercase">Online</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* フッターライン */}
+                <div className="relative z-20 px-4 py-2 border-t border-cyan-500/10 bg-slate-950/30">
+                  <p className="text-[8px] text-slate-600 font-mono tracking-widest text-center">
+                    TOURING MANIA // GARAGE SYSTEM v2.0
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ---- 右カラム：バイク展示エリア ---- */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 z-20 min-h-0">
               {garageQuery.isLoading ? (
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
                   <p className="text-cyan-400 font-bold tracking-widest text-xs animate-pulse uppercase">GARAGE LOADING...</p>
                 </div>
               ) : garageBike ? (
-                // Presenting the Favorite Bike
-                <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 gap-6">
-                  {/* Spotlight Banner */}
+                <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 gap-5">
                   <div className="text-center">
                     <p className="text-[10px] text-cyan-400 font-black tracking-[0.4em] uppercase mb-1 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">MY FAVORITE MACHINE</p>
                     <h2 className="text-2xl sm:text-3xl font-black text-white italic uppercase tracking-wider">{garageBike.name}</h2>
                   </div>
 
-                  {/* Bike Card Display with Spotlight Glow */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 100, damping: 15 }}
                     className="relative max-w-xs w-full flex-1 flex items-center justify-center min-h-0"
                   >
-                    {/* Neon Floor Glow */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-48 h-6 bg-cyan-400/20 blur-[15px] rounded-full z-0" />
-                    
                     <div className="z-10 w-full h-full max-h-[420px] flex items-center justify-center">
                       <BikeCard bike={garageBike} size="large" showDetails={true} />
                     </div>
                   </motion.div>
 
-                  {/* Action to change bike */}
                   <Button
                     onClick={() => setShowBikeSelectModal(true)}
                     className="h-12 px-8 bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 hover:border-cyan-400 text-cyan-400 hover:text-white font-bold rounded-xl shadow-[0_0_15px_rgba(34,211,238,0.1)] transition-all"
@@ -487,7 +561,6 @@ export default function MyGarage() {
                   </Button>
                 </div>
               ) : (
-                // Empty Garage State
                 <div className="text-center py-12 px-6 max-w-sm bg-slate-900/60 border border-dashed border-slate-800 rounded-2xl backdrop-blur-sm">
                   <div className="w-16 h-16 rounded-full bg-slate-950 flex items-center justify-center mx-auto mb-4 border border-slate-800">
                     <Sparkles className="w-6 h-6 text-slate-500" />
