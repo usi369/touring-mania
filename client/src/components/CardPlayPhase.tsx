@@ -217,6 +217,50 @@ export default function CardPlayPhase({
 
   const hasActiveCards = fieldCards.some((fc: any) => fc.playerId >= 0);
 
+  /**
+   * 選択中カードと場の最新アクティブカード間で利用可能な縛り種別を算出する。
+   * 場にアクティブなカードがない場合（場が流れた直後）は、縛りは宣言できない。
+   */
+  const getAvailableBindTypes = (): { type: string; label: string; value: string; available: boolean }[] => {
+    if (selectedCards.length === 0) return [];
+
+    const firstSelectedBike = playerHand.find(b => b.id === selectedCards[0]);
+    if (!firstSelectedBike) return [];
+
+    // 場のアクティブなカードの最新（最後のバイク）を取得
+    const activeFieldCards = fieldCards.filter((fc: any) => fc.playerId >= 0);
+    // activeFieldCards[0] が最新（orderBy asc で最後に追加されたもの）
+    const latestRecord = activeFieldCards.length > 0 ? activeFieldCards[0] : null;
+    const latestBike = latestRecord?.bikes?.[latestRecord.bikes.length - 1];
+
+    // 場にアクティブなカードがなければ縛りは不可
+    if (!latestBike) return [];
+
+    return [
+      {
+        type: 'maker',
+        label: 'メーカー',
+        value: firstSelectedBike.maker,
+        available: firstSelectedBike.maker === latestBike.maker,
+      },
+      {
+        type: 'cylinders',
+        label: '気筒数',
+        value: String(firstSelectedBike.cylinders),
+        available: firstSelectedBike.cylinders === latestBike.cylinders,
+      },
+      {
+        type: 'transmission',
+        label: 'AT/MT',
+        value: firstSelectedBike.transmission,
+        available: firstSelectedBike.transmission === latestBike.transmission,
+      },
+    ];
+  };
+
+  const availableBindTypes = getAvailableBindTypes();
+  const hasAnyAvailableBind = availableBindTypes.some(bt => bt.available);
+
   return (
     <div className="w-full h-full flex flex-col gap-3">
       {/* Field Cards - Cards on the table */}
@@ -403,9 +447,14 @@ export default function CardPlayPhase({
                 const validation = validateSelection();
                 if (validation.valid) {
                   if (currentBind) {
+                    // 既に縛り中ならそのまま出す
                     handlePlayCard();
-                  } else {
+                  } else if (hasAnyAvailableBind) {
+                    // 宣言可能な縛りが1つでもあればダイアログ表示
                     setShowBindDialog(true);
+                  } else {
+                    // 縛り不可能ならそのまま出す
+                    handlePlayCard();
                   }
                 } else {
                   if (onLog) {
@@ -462,41 +511,39 @@ export default function CardPlayPhase({
             <div>
               <p className="text-sm text-slate-400 mb-2">縛りの種類</p>
               <div className="flex gap-2 flex-wrap">
-                {['maker', 'cylinders', 'transmission'].map((type) => (
+                {availableBindTypes.map((bt) => (
                   <Button
-                    key={type}
-                    variant={selectedBindType === type ? 'default' : 'outline'}
-                    className={`text-xs sm:text-sm ${selectedBindType === type ? 'bg-cyan-600' : ''}`}
+                    key={bt.type}
+                    variant={selectedBindType === bt.type ? 'default' : 'outline'}
+                    className={`text-xs sm:text-sm ${
+                      selectedBindType === bt.type
+                        ? 'bg-cyan-600'
+                        : !bt.available
+                          ? 'opacity-40 cursor-not-allowed border-slate-700 text-slate-500'
+                          : ''
+                    }`}
+                    disabled={!bt.available}
                     onClick={() => {
-                      setSelectedBindType(type);
-                      if (selectedCards.length > 0) {
-                        const firstBike = playerHand.find(b => b.id === selectedCards[0]);
-                        if (firstBike) {
-                          let value = "";
-                          if (type === 'maker') value = firstBike.maker;
-                          else if (type === 'cylinders') value = String(firstBike.cylinders);
-                          else if (type === 'transmission') value = firstBike.transmission;
-                          setSelectedBindValue(value);
-                        }
-                      }
+                      setSelectedBindType(bt.type);
+                      setSelectedBindValue(bt.value);
                     }}
                   >
-                    {type === 'maker' ? 'メーカー' : type === 'cylinders' ? '気筒数' : 'AT/MT'}
+                    {bt.label}
+                    {bt.available && (
+                      <span className="ml-1 text-[10px] text-cyan-300">({bt.value})</span>
+                    )}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {selectedBindType && (
-              <div>
-                <p className="text-sm text-slate-400 mb-2">値を入力</p>
-                <input
-                  type="text"
-                  placeholder="例: Honda, 4, AT"
-                  className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white text-sm"
-                  value={selectedBindValue || ''}
-                  onChange={(e) => setSelectedBindValue(e.target.value)}
-                />
+            {selectedBindType && selectedBindValue && (
+              <div className="bg-slate-800/60 rounded-lg px-3 py-2 border border-slate-700">
+                <p className="text-sm text-slate-300">
+                  宣言内容: <span className="text-cyan-400 font-bold">{
+                    availableBindTypes.find(bt => bt.type === selectedBindType)?.label
+                  }</span> = <span className="text-white font-bold">{selectedBindValue}</span>
+                </p>
               </div>
             )}
 
@@ -525,3 +572,4 @@ export default function CardPlayPhase({
     </div>
   );
 }
+
