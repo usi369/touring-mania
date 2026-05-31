@@ -12,21 +12,25 @@ import Encyclopedia from "./pages/Encyclopedia";
 import MyGarage from "./pages/MyGarage";
 import SetupGarage from "./pages/SetupGarage";
 
+import GameLayout from "./components/GameLayout";
+
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/game/setup"} component={GameSetup} />
-      <Route path={"/game/play"} component={GameBoard} />
-      <Route path={"/coming-soon"} component={ComingSoon} />
-      <Route path={"/encyclopedia"} component={Encyclopedia} />
-      <Route path={"/my-garage"} component={MyGarage} />
-      <Route path={"/setup-garage"} component={SetupGarage} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <GameLayout>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/game/setup"} component={GameSetup} />
+        <Route path={"/game/play"} component={GameBoard} />
+        <Route path={"/coming-soon"} component={ComingSoon} />
+        <Route path={"/encyclopedia"} component={Encyclopedia} />
+        <Route path={"/my-garage"} component={MyGarage} />
+        <Route path={"/setup-garage"} component={SetupGarage} />
+        <Route path={"/404"} component={NotFound} />
+        {/* Final fallback route */}
+        <Route component={NotFound} />
+      </Switch>
+    </GameLayout>
   );
 }
 
