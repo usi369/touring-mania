@@ -135,6 +135,51 @@ async function checkAndHandleDeadlock(db: any, gameId: number): Promise<boolean>
   }
 }
 
+/** カードが現在のスペック宣言および縛り条件を満たしているか検証する */
+function validatePlayRules(
+  bikeRecords: any[],
+  lastBikeRecords: any[],
+  declaredSpec: string | null,
+  declaredDirection: string | null,
+  currentBind: string | null,
+  bindValue: string | null
+): { valid: boolean; reason?: string } {
+  // 1. スペック宣言の検証
+  if (declaredSpec && declaredDirection && lastBikeRecords.length > 0) {
+    const specKey = declaredSpec as keyof typeof bikeRecords[0];
+    const getRepresentativeValue = (bikeList: any[]): number => {
+      const vals = bikeList.map((b: any) => {
+        return specKey === 'cylinders'
+          ? parseInt(b[specKey] as string, 10) || 1
+          : Number(b[specKey]) || 0;
+      });
+      return declaredDirection === 'up' ? Math.max(...vals) : Math.min(...vals);
+    };
+
+    const lastValue = getRepresentativeValue(lastBikeRecords);
+    const playValue = getRepresentativeValue(bikeRecords);
+
+    if (declaredDirection === 'up' && playValue < lastValue) {
+      return { valid: false, reason: `スペック制限違反: ${declaredSpec}の値は${lastValue}以上である必要がありますが、${playValue}です (方向: up)` };
+    }
+    if (declaredDirection === 'down' && playValue > lastValue) {
+      return { valid: false, reason: `スペック制限違反: ${declaredSpec}の値は${lastValue}以下である必要がありますが、${playValue}です (方向: down)` };
+    }
+  }
+
+  // 2. 縛り宣言の検証
+  if (currentBind && bindValue) {
+    for (const bike of bikeRecords) {
+      const playable = canPlayCard(bike as any, null, currentBind as any, bindValue);
+      if (!playable) {
+        return { valid: false, reason: `縛り制限違反: カード ${bike.name} は現在の縛り（${currentBind}: ${bindValue}）に適合していません` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
 export const gameRouter = router({
   /**
    * Create a new game
@@ -364,46 +409,32 @@ export const gameRouter = router({
           if (!hand.includes(id)) throw new Error(`Card ${id} is not in player hand`);
         }
 
-        // 2. 宣言スペックの値バリデーション（場にアクティブカードがある場合）
-        if (game.declaredSpec && game.declaredDirection) {
-          const lastPlayedRecord = await db
-            .select()
-            .from(playedCards)
-            .where(and(eq(playedCards.gameId, input.gameId), gt(playedCards.playerId, -1)))
-            .orderBy(desc(playedCards.id))
-            .limit(1);
+        // 2. 宣言スペックおよび縛りのバリデーション
+        const lastPlayedRecord = await db
+          .select()
+          .from(playedCards)
+          .where(and(eq(playedCards.gameId, input.gameId), gt(playedCards.playerId, -1)))
+          .orderBy(desc(playedCards.id))
+          .limit(1);
 
-          if (lastPlayedRecord.length > 0) {
-            const lastBikeIds: number[] = JSON.parse(lastPlayedRecord[0].bikeIds);
-            const lastBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds));
+        let lastBikeRecords: any[] = [];
+        if (lastPlayedRecord.length > 0) {
+          const lastBikeIds: number[] = JSON.parse(lastPlayedRecord[0].bikeIds);
+          lastBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, lastBikeIds));
+        }
 
-            if (lastBikeRecords.length > 0) {
-              const specKey = game.declaredSpec as keyof typeof lastBikeRecords[0];
+        const playedBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, input.bikeIds));
+        const ruleCheck = validatePlayRules(
+          playedBikeRecords,
+          lastBikeRecords,
+          game.declaredSpec,
+          game.declaredDirection,
+          game.currentBind,
+          game.bindValue
+        );
 
-              // 複数枚出しの場合、代表値として最も高い/低い値を使う
-              const getRepresentativeValue = (bikeList: any[]): number => {
-                const vals = bikeList.map((b: any) => {
-                  return specKey === 'cylinders'
-                    ? parseInt(b[specKey] as string, 10) || 1
-                    : Number(b[specKey]) || 0;
-                });
-                return game.declaredDirection === 'up' ? Math.max(...vals) : Math.min(...vals);
-              };
-
-              const lastValue = getRepresentativeValue(lastBikeRecords);
-
-              // プレイしようとしているカードを取得して値チェック
-              const playedBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, input.bikeIds));
-              const playValue = getRepresentativeValue(playedBikeRecords);
-
-              if (game.declaredDirection === 'up' && playValue < lastValue) {
-                throw new Error(`[RULE VIOLATION] P${input.playerId} tried to play ${game.declaredSpec}=${playValue} but last card was ${lastValue} (direction: up). bikeIds=${JSON.stringify(input.bikeIds)}`);
-              }
-              if (game.declaredDirection === 'down' && playValue > lastValue) {
-                throw new Error(`[RULE VIOLATION] P${input.playerId} tried to play ${game.declaredSpec}=${playValue} but last card was ${lastValue} (direction: down). bikeIds=${JSON.stringify(input.bikeIds)}`);
-              }
-            }
-          }
+        if (!ruleCheck.valid) {
+          throw new Error(`[RULE VIOLATION] P${input.playerId} play rejected: ${ruleCheck.reason}`);
         }
         // ---- バリデーション終わり ----
 
@@ -671,34 +702,59 @@ export const gameRouter = router({
           return np;
         };
 
+        let finalDecision = decision;
+
         if (decision.action === 'play' && decision.bikeIds) {
-          console.log(`[CPU] P${cpuPlayerId} plays: ${JSON.stringify(decision.bikeIds)}`);
-          const updatedHand = handIds.filter((id: number) => !decision.bikeIds!.includes(id));
+          const playedBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, decision.bikeIds));
+          const ruleCheck = validatePlayRules(
+            playedBikeRecords,
+            lastBikes,
+            game.declaredSpec,
+            game.declaredDirection,
+            game.currentBind,
+            game.bindValue
+          );
+
+          if (!ruleCheck.valid) {
+            console.error(`[CPU RULE VIOLATION] P${cpuPlayerId} selected invalid cards: ${ruleCheck.reason}. Falling back to draw/pass.`);
+            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
+            const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
+            if (nonEmptyDecks.length > 0) {
+              finalDecision = { action: 'draw' };
+            } else {
+              finalDecision = { action: 'pass' };
+            }
+          }
+        }
+
+        if (finalDecision.action === 'play' && finalDecision.bikeIds) {
+          console.log(`[CPU] P${cpuPlayerId} plays: ${JSON.stringify(finalDecision.bikeIds)}`);
+          const updatedHand = handIds.filter((id: number) => !finalDecision.bikeIds!.includes(id));
           console.log(`[CPU] P${cpuPlayerId} hand AFTER play: ${JSON.stringify(updatedHand)}`);
           await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
           
           await db.insert(playedCards).values({ 
             gameId: input.gameId, 
             playerId: cpuPlayerId, 
-            bikeIds: JSON.stringify(decision.bikeIds),
+            bikeIds: JSON.stringify(finalDecision.bikeIds),
             declaredSpec: game.declaredSpec,
             declaredDirection: game.declaredDirection,
-            bindType: decision.bindDeclare ? decision.bindDeclare.type : game.currentBind,
-            bindValue: decision.bindDeclare ? decision.bindDeclare.value : game.bindValue,
+            bindType: finalDecision.bindDeclare ? finalDecision.bindDeclare.type : game.currentBind,
+            bindValue: finalDecision.bindDeclare ? finalDecision.bindDeclare.value : game.bindValue,
           });
           
-          if (decision.bindDeclare) await db.update(games).set({ currentBind: decision.bindDeclare.type, bindValue: decision.bindDeclare.value }).where(eq(games.id, input.gameId));
+          if (finalDecision.bindDeclare) await db.update(games).set({ currentBind: finalDecision.bindDeclare.type, bindValue: finalDecision.bindDeclare.value }).where(eq(games.id, input.gameId));
           if (updatedHand.length === 0) {
             await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
             await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
-            return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: decision.bindDeclare };
+            return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: finalDecision.bindDeclare };
           }
           const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
           await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
           await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
           const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
-          return { action: 'play', nextPlayer, bikeIds: decision.bikeIds, cpuPlayerId, bindDeclare: decision.bindDeclare, gameFinished: isDeadlock };
-        } else if (decision.action === 'draw') {
+          return { action: 'play', nextPlayer, bikeIds: finalDecision.bikeIds, cpuPlayerId, bindDeclare: finalDecision.bindDeclare, gameFinished: isDeadlock };
+        } else if (finalDecision.action === 'draw') {
            const gameDecks = await db.select().from(decks).where(eq(decks.gameId, input.gameId));
            const nonEmptyDecks = gameDecks.filter((d: any) => JSON.parse(d.bikeIds).length > 0);
            if (nonEmptyDecks.length > 0) {
@@ -721,37 +777,56 @@ export const gameRouter = router({
              
              const allStates = await db.select().from(gameStates).where(eq(gameStates.gameId, input.gameId));
              
-             // 再評価の結果カードを出せる場合
+             let finalSecondDecision = secondDecision;
+
              if (secondDecision.action === 'play' && secondDecision.bikeIds) {
-               console.log(`[CPU] P${cpuPlayerId} plays after draw: ${JSON.stringify(secondDecision.bikeIds)}`);
-               const updatedHand = newHand.filter((id: number) => !secondDecision.bikeIds!.includes(id));
+               const playedBikeRecords = await db.select().from(bikes).where(inArray(bikes.id, secondDecision.bikeIds));
+               const ruleCheck = validatePlayRules(
+                 playedBikeRecords,
+                 lastBikes,
+                 game.declaredSpec,
+                 game.declaredDirection,
+                 game.currentBind,
+                 game.bindValue
+               );
+
+               if (!ruleCheck.valid) {
+                 console.error(`[CPU RULE VIOLATION after draw] P${cpuPlayerId} selected invalid cards: ${ruleCheck.reason}. Falling back to pass.`);
+                 finalSecondDecision = { action: 'pass' };
+               }
+             }
+
+             // 再評価の結果カードを出せる場合
+             if (finalSecondDecision.action === 'play' && finalSecondDecision.bikeIds) {
+               console.log(`[CPU] P${cpuPlayerId} plays after draw: ${JSON.stringify(finalSecondDecision.bikeIds)}`);
+               const updatedHand = newHand.filter((id: number) => !finalSecondDecision.bikeIds!.includes(id));
                await db.update(gameStates).set({ hand: JSON.stringify(updatedHand) as any, passed: 0 }).where(and(eq(gameStates.gameId, input.gameId), eq(gameStates.playerId, cpuPlayerId)));
                
                await db.insert(playedCards).values({ 
                  gameId: input.gameId, 
                  playerId: cpuPlayerId, 
-                 bikeIds: JSON.stringify(secondDecision.bikeIds),
+                 bikeIds: JSON.stringify(finalSecondDecision.bikeIds),
                  declaredSpec: game.declaredSpec,
                  declaredDirection: game.declaredDirection,
-                 bindType: secondDecision.bindDeclare ? secondDecision.bindDeclare.type : game.currentBind,
-                 bindValue: secondDecision.bindDeclare ? secondDecision.bindDeclare.value : game.bindValue,
+                 bindType: finalSecondDecision.bindDeclare ? finalSecondDecision.bindDeclare.type : game.currentBind,
+                 bindValue: finalSecondDecision.bindDeclare ? finalSecondDecision.bindDeclare.value : game.bindValue,
                });
                
-               if (secondDecision.bindDeclare) {
-                 await db.update(games).set({ currentBind: secondDecision.bindDeclare.type, bindValue: secondDecision.bindDeclare.value }).where(eq(games.id, input.gameId));
-               }
+                if (finalSecondDecision.bindDeclare) {
+                  await db.update(games).set({ currentBind: finalSecondDecision.bindDeclare.type, bindValue: finalSecondDecision.bindDeclare.value }).where(eq(games.id, input.gameId));
+                }
                
                if (updatedHand.length === 0) {
                  await db.update(games).set({ status: 'finished' }).where(eq(games.id, input.gameId));
                  await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_WIN');
-                 return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: secondDecision.bindDeclare, drewCard: true };
+                 return { action: 'play', gameFinished: true, winner: cpuPlayerId, cpuPlayerId, bindDeclare: finalSecondDecision.bindDeclare, drewCard: true };
                }
                
                const nextPlayer = getNextTurnPlayer(cpuPlayerId, allStates);
                await db.update(games).set({ currentTurn: nextPlayer }).where(eq(games.id, input.gameId));
                await checkGameIntegrity(db, input.gameId, 'CPU_PLAY_AFTER');
                const isDeadlock = await checkAndHandleDeadlock(db, input.gameId);
-               return { action: 'play', nextPlayer, bikeIds: secondDecision.bikeIds, cpuPlayerId, bindDeclare: secondDecision.bindDeclare, gameFinished: isDeadlock, drewCard: true };
+                return { action: 'play', nextPlayer, bikeIds: finalSecondDecision.bikeIds, cpuPlayerId, bindDeclare: finalSecondDecision.bindDeclare, gameFinished: isDeadlock, drewCard: true };
              } 
              
              // 再評価の結果カードを出せない場合はパス

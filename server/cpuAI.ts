@@ -65,9 +65,7 @@ export function decideCPUAction(
   // Filter valid cards based on current bind
   let validCards = hand;
   
-  if (currentBind && bindValue && playedBikes.length > 0) {
-    const lastBike = playedBikes[playedBikes.length - 1];
-    
+  if (currentBind && bindValue) {
     validCards = hand.filter(bike => {
       if (currentBind === 'maker') {
         return bike.maker === bindValue;
