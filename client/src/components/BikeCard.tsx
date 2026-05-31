@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
-import { X } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 
 interface BikeInfo {
   id: number;
@@ -69,6 +70,55 @@ export default function BikeCard({
 }: BikeCardProps) {
   const [showModal, setShowModal] = useState(false);
   const [showBack, setShowBack] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 3D Tilt Logic
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x);
+  const mouseYSpring = useSpring(y);
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  // Rarity Logic (Logical Design based on Specs)
+  const getRarity = () => {
+    if (bike.horsepower > 150 || bike.price > 200) return "legendary";
+    if (bike.horsepower > 70 || bike.price > 100) return "rare";
+    return "common";
+  };
+
+  const rarity = getRarity();
+  const rarityColors = {
+    legendary: "from-amber-400 via-yellow-500 to-orange-600",
+    rare: "from-cyan-400 via-blue-500 to-purple-600",
+    common: "from-slate-400 via-slate-500 to-slate-600",
+  };
+
+  const glowStyles = {
+    legendary: "shadow-[0_0_30px_rgba(245,158,11,0.4)] border-amber-400/50",
+    rare: "shadow-[0_0_20px_rgba(34,211,238,0.3)] border-cyan-400/40",
+    common: "shadow-lg border-white/10",
+  };
 
   const sizeClasses = {
     small: "w-16 h-24",
@@ -86,259 +136,194 @@ export default function BikeCard({
 
   return (
     <>
-      <Card
-        onClick={handleCardClick}
-        className={`
-          ${isPokerRatio ? "w-full aspect-[63/88]" : sizeClasses[size]}
-          bg-gradient-to-br from-cyan-500/20 to-pink-500/20 
-          border-2 rounded-xl flex flex-col items-center
-          cursor-pointer transition-all duration-300 relative overflow-hidden
-          ${isPokerRatio ? "p-3 sm:p-5" : ""}
-          ${isSelected 
-            ? "border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105 z-10" 
-            : "border-white/10 hover:border-white/30"
-          }
-          ${showDetails ? "hover:shadow-2xl" : ""}
-        `}
+      <motion.div
+        ref={cardRef}
+        style={{
+          rotateX: isSelected ? 0 : rotateX,
+          rotateY: isSelected ? 0 : rotateY,
+          transformStyle: "preserve-3d",
+        }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="perspective-1000"
       >
-        {/* Top Bar (ID & Badges) - Positioned absolutely to touch edges and fit rounded corners */}
-        {size !== "small" && (
-          <>
-            <div className="absolute top-0 left-0 bg-slate-900/80 backdrop-blur-sm pl-3 pr-2.5 pt-1.5 pb-1 rounded-br-lg border-b border-r border-white/10 z-20">
-              <p className="text-[10px] font-mono text-cyan-400 leading-none">
-                #{bike.id.toString().padStart(3, '0')}
-              </p>
-            </div>
-            <div className="absolute top-0 right-0 flex z-20">
-              <span className="px-2 pt-1.5 pb-1 bg-pink-500/80 backdrop-blur-sm text-[9px] font-bold text-white rounded-bl-lg border-b border-l border-white/10 leading-none">
-                {bike.transmission}
-              </span>
-              <span className="pl-2 pr-3 pt-1.5 pb-1 bg-cyan-500/80 backdrop-blur-sm text-[9px] font-bold text-white border-b border-l border-white/10 leading-none">
-                {bike.cylinders}気筒
-              </span>
-            </div>
-          </>
-        )}
+        <Card
+          onClick={handleCardClick}
+          className={`
+            ${isPokerRatio ? "w-full aspect-[63/88]" : sizeClasses[size]}
+            bg-slate-900 border-2 rounded-2xl flex flex-col items-center
+            cursor-pointer transition-all duration-300 relative overflow-hidden
+            ${isPokerRatio ? "p-3 sm:p-5" : ""}
+            ${isSelected 
+              ? "border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.6)] scale-105 z-10" 
+              : glowStyles[rarity]
+            }
+          `}
+        >
+          {/* Rarity Aura (Moving Gradient Background) */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${rarityColors[rarity]} opacity-[0.08] z-0`} />
+          
+          {/* Holographic Flash Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-transparent opacity-20 pointer-events-none z-10" />
 
-        <div className="w-full flex flex-col h-full text-center relative z-10">
-          {/* Spacer to prevent header from overlapping absolute badges */}
-          {size !== "small" && <div className="h-4" />}
-
-          {/* Header Info - Center Top */}
-          <div className={`${isPokerRatio ? "mb-1" : "mb-2"} mt-1`}>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0">
-              {bike.maker}
-            </p>
-            <div className={`
-              flex flex-col justify-center
-              ${isPokerRatio ? 'h-[44px]' : (size === 'large' ? 'h-[72px]' : 'h-[60px]')}
-            `}>
-              <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-xl sm:text-2xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-md`}>
-                {bike.name}
-              </h3>
-            </div>
-          </div>
-
+          {/* Top Bar (ID & Badges) */}
           {size !== "small" && (
             <>
-              {/* Bike Image - Border fitting the actual image size */}
-              <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-square"} overflow-hidden ${isEncyclopedia ? "mb-1" : "mb-3"} group relative flex items-center justify-center`}>
-                {bike.photoUrl ? (
-                  <img 
-                    src={bike.photoUrl} 
-                    alt={bike.name} 
-                    className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-105 rounded-lg border border-white/20 shadow-lg"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50 rounded-lg">
-                    <span className="text-[10px] font-bold tracking-tighter uppercase">No Image</span>
+              <div className="absolute top-0 left-0 bg-slate-950/80 backdrop-blur-md pl-3 pr-2.5 pt-1.5 pb-1 rounded-br-xl border-b border-r border-white/5 z-20">
+                <p className="text-[9px] font-mono text-cyan-400/80 leading-none">
+                  #{bike.id.toString().padStart(3, '0')}
+                </p>
+              </div>
+              <div className="absolute top-0 right-0 flex z-20">
+                {rarity === "legendary" && (
+                  <div className="px-2 pt-1.5 pb-1 bg-amber-500/90 text-white rounded-bl-xl flex items-center gap-1 shadow-lg">
+                    <Sparkles className="w-2.5 h-2.5 fill-white" />
+                    <span className="text-[8px] font-black uppercase">LEGEND</span>
+                  </div>
+                )}
+                {rarity === "rare" && (
+                  <div className="px-2 pt-1.5 pb-1 bg-cyan-600/90 text-white rounded-bl-xl flex items-center gap-1 shadow-lg">
+                    <span className="text-[8px] font-black uppercase">RARE</span>
                   </div>
                 )}
               </div>
-
-              {/* Specs below image - minimized vertical padding */}
-              {isEncyclopedia && (bike.displacement || bike.engineType) && (
-                <div className="text-[11px] font-mono font-bold text-slate-400 -mt-0.5 mb-1.5 leading-none">
-                  {bike.displacement && `${bike.displacement}${bike.displacementUnit || ''}`}
-                  {bike.displacement && bike.engineType && ' '}
-                  {bike.engineType}
-                </div>
-              )}
-
-              {/* Quick Specs List */}
-              <div className={`space-y-0.5 sm:space-y-1 mt-auto border-t border-white/10 ${isPokerRatio ? "pt-2 sm:pt-3" : "pt-3"}`}>
-                {SPEC_ITEMS.map((spec) => {
-                  const isActive = spec.key === activeSpec;
-                  return (
-                    <div 
-                      key={spec.key} 
-                      className={`flex justify-between items-center text-[13px] px-1 py-0.5 rounded ${isActive ? 'bg-amber-500/20 text-amber-300 font-bold' : ''}`}
-                    >
-                      <span className={`${isActive ? 'text-amber-400/80' : 'text-slate-400'} font-medium`}>{spec.label}</span>
-                      <span className={`${isActive ? 'text-amber-200' : 'text-slate-100'} font-bold leading-none`}>
-                        {(bike as any)[spec.key] ?? "-"}<span className="text-[10px] ml-0.5 text-slate-500 font-normal">{spec.unit}</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
             </>
           )}
-        </div>
-      </Card>
 
-      {/* Detail Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <Card className="bg-slate-900 border-cyan-500/50 w-full max-w-sm p-6 relative">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Header */}
-            <div className="mb-4">
-              <p className="text-xs text-cyan-400 font-semibold">
-                {bike.category}
+          <div className="w-full flex flex-col h-full text-center relative z-20">
+            {/* Header Info */}
+            <div className={`${isPokerRatio ? "mb-1" : "mb-2"} mt-2`}>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mb-0.5">
+                {bike.maker}
               </p>
-              <h2 className="text-xl font-bold text-white mb-1">
-                {bike.name}
-              </h2>
-              <p className="text-sm text-slate-400">{bike.maker}</p>
-            </div>
-
-            {/* Modal Image - Always Aspect Square (Optimized size) */}
-            <div className="w-40 h-40 mx-auto overflow-hidden mb-4 rounded-xl border border-white/10 bg-slate-950/50 flex items-center justify-center relative">
-              {bike.photoUrl ? (
-                <img 
-                  src={bike.photoUrl} 
-                  alt={bike.name} 
-                  className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-300 rounded-lg"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-700 bg-slate-900/50 rounded-lg">
-                  <span className="text-xs font-bold tracking-tighter uppercase">No Image</span>
-                </div>
-              )}
-            </div>
-
-            {/* Tab Control (Only for Encyclopedia) */}
-            {isEncyclopedia && (
-              <div className="flex bg-slate-800/50 p-1 rounded-lg mb-4 border border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setShowBack(false)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                    !showBack
-                      ? "bg-slate-700 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  スペック（表）
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBack(true)}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                    showBack
-                      ? "bg-slate-700 text-white shadow-sm"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                >
-                  持ち主情報（裏）
-                </button>
+              <div className={`
+                flex flex-col justify-center
+                ${isPokerRatio ? 'h-[44px]' : (size === 'large' ? 'h-[72px]' : 'h-[60px]')}
+              `}>
+                <h3 className={`font-black text-white leading-tight ${isPokerRatio ? 'text-lg sm:text-xl' : (size === 'large' ? 'text-lg' : 'text-base')} drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] uppercase italic`}>
+                  {bike.name}
+                </h3>
               </div>
-            )}
+            </div>
 
-            {!showBack ? (
-              <div 
-                onClick={() => isEncyclopedia && setShowBack(true)}
-                className={isEncyclopedia ? "cursor-pointer" : ""}
-              >
-                {/* Specs Grid - 3 Columns (Optimized layout) */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {MODAL_SPEC_ITEMS.map((spec) => {
-                    let val = (bike as any)[spec.key] ?? "-";
-                    let colorClass = "text-white";
-                    
-                    if (spec.key === "cylinders") {
-                      colorClass = "text-cyan-400";
-                      if (val !== "-") val = `${val}気筒`;
-                    } else if (spec.key === "transmission") {
-                      colorClass = "text-pink-400";
-                    }
-                    
+            {size !== "small" && (
+              <>
+                {/* Bike Image */}
+                <div className={`w-full ${isPokerRatio ? "flex-1 min-h-0" : "aspect-square"} overflow-hidden ${isEncyclopedia ? "mb-1" : "mb-3"} group relative flex items-center justify-center`}>
+                  <div className="absolute inset-0 bg-slate-950/40 rounded-xl border border-white/5" />
+                  {bike.photoUrl ? (
+                    <img 
+                      src={bike.photoUrl} 
+                      alt={bike.name} 
+                      className="max-w-[90%] max-h-[90%] w-auto h-auto object-contain transition-transform duration-700 group-hover:scale-110 drop-shadow-2xl z-10"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/1e293b/64748b?text=No+Image';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-800 bg-slate-950/20 rounded-xl">
+                      <span className="text-[10px] font-black tracking-widest uppercase opacity-40">Syncing...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Specs Highlight Area */}
+                <div className={`space-y-0.5 mt-auto border-t border-white/5 ${isPokerRatio ? "pt-2 sm:pt-3" : "pt-3"}`}>
+                  {SPEC_ITEMS.map((spec) => {
+                    const isActive = spec.key === activeSpec;
                     return (
-                      <div key={spec.key} className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-2 min-h-[58px] flex flex-col justify-between">
-                        <p className="text-[9px] text-slate-400 font-bold leading-none mb-1">{spec.label}</p>
-                        <p className={`text-base font-black ${colorClass} leading-tight`}>
-                          {val}
-                          {spec.unit && spec.key !== "cylinders" && (
-                            <span className="text-[9px] ml-0.5 text-slate-500 font-normal">{spec.unit}</span>
-                          )}
-                        </p>
+                      <div 
+                        key={spec.key} 
+                        className={`flex justify-between items-center text-[11px] px-2 py-0.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'opacity-80'}`}
+                      >
+                        <span className={`${isActive ? 'text-cyan-400' : 'text-slate-500'} font-bold uppercase text-[8px] tracking-wider`}>{spec.label}</span>
+                        <div className="flex items-baseline">
+                          <span className={`${isActive ? 'text-white' : 'text-slate-200'} font-black italic`}>
+                            {(bike as any)[spec.key] ?? "-"}
+                          </span>
+                          <span className="text-[8px] ml-0.5 text-slate-600 font-bold uppercase">{spec.unit}</span>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
+              </>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Detail Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <Card className="bg-slate-900 border-2 border-white/10 w-full max-w-sm p-6 relative overflow-hidden">
+            <div className={`absolute inset-0 bg-gradient-to-br ${rarityColors[rarity]} opacity-[0.05]`} />
+            
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="relative z-10">
+              <div className="mb-4">
+                <p className={`text-[10px] font-black uppercase tracking-widest ${rarity === 'legendary' ? 'text-amber-400' : 'text-cyan-400'}`}>
+                  {bike.category} — {rarity.toUpperCase()}
+                </p>
+                <h2 className="text-2xl font-black text-white mb-1 italic uppercase italic leading-none">
+                  {bike.name}
+                </h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{bike.maker}</p>
               </div>
-            ) : (
-              /* Owner Info (Back side - Compact version) */
-              <div 
-                onClick={() => setShowBack(false)}
-                className="space-y-4 mb-6 cursor-pointer"
-              >
-                <div className="bg-gradient-to-br from-pink-500/10 to-cyan-500/10 border border-cyan-500/20 rounded-xl p-4 relative overflow-hidden min-h-[200px] flex flex-col justify-between">
-                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/5 via-transparent to-transparent pointer-events-none" />
-                  
+
+              <div className="w-44 h-44 mx-auto overflow-hidden mb-6 rounded-2xl border border-white/5 bg-slate-950/50 flex items-center justify-center shadow-inner">
+                {bike.photoUrl ? (
+                  <img src={bike.photoUrl} alt={bike.name} className="max-w-[85%] max-h-[85%] w-auto h-auto object-contain drop-shadow-2xl" />
+                ) : (
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-tighter">No Image</span>
+                )}
+              </div>
+
+              {isEncyclopedia && (
+                <div className="flex bg-slate-950/50 p-1 rounded-xl mb-4 border border-white/5">
+                  <button onClick={() => setShowBack(false)} className={`flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${!showBack ? "bg-slate-800 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"}`}>SPECS</button>
+                  <button onClick={() => setShowBack(true)} className={`flex-1 py-2 text-[10px] font-black rounded-lg transition-all ${showBack ? "bg-slate-800 text-white shadow-lg" : "text-slate-500 hover:text-slate-300"}`}>OWNER</button>
+                </div>
+              )}
+
+              {!showBack ? (
+                <div className="grid grid-cols-3 gap-2 mb-6">
+                  {MODAL_SPEC_ITEMS.map((spec) => (
+                    <div key={spec.key} className="bg-slate-950/40 border border-white/5 rounded-xl p-2 flex flex-col justify-between min-h-[50px]">
+                      <p className="text-[8px] text-slate-600 font-black uppercase tracking-tighter">{spec.label}</p>
+                      <p className="text-xs font-black text-slate-200">
+                        {(bike as any)[spec.key] ?? "-"}
+                        <span className="text-[8px] ml-0.5 text-slate-600">{spec.unit}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-slate-950 to-slate-900 border border-white/5 rounded-2xl p-5 mb-6 min-h-[160px] flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-mono tracking-widest text-slate-500 uppercase block mb-1">
-                      BIKE OWNER CARD
-                    </span>
-                    <h3 className="text-lg font-black text-cyan-400 mb-3 tracking-wider">
-                      持ち主の記録
-                    </h3>
-                    
-                    <div className="space-y-3">
+                    <span className="text-[8px] font-mono tracking-widest text-slate-600 uppercase block mb-2">Registration Record</span>
+                    <div className="space-y-4">
                       <div>
-                        <p className="text-[10px] text-slate-500 font-bold mb-0.5">なまえ</p>
-                        <p className="text-lg font-bold text-white tracking-wide">
-                          {bike.ownerName || "未登録"}
-                        </p>
+                        <p className="text-[8px] text-slate-600 font-black uppercase">Owner Name</p>
+                        <p className="text-xl font-black text-white italic tracking-wide">{bike.ownerName || "ANONYMOUS"}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-slate-500 font-bold mb-0.5">都道府県</p>
-                        <p className="text-base font-bold text-slate-200">
-                          {bike.ownerState || "未登録"}
-                        </p>
+                        <p className="text-[8px] text-slate-600 font-black uppercase">Region</p>
+                        <p className="text-base font-black text-cyan-400/80 italic">{bike.ownerState || "UNKNOWN"}</p>
                       </div>
                     </div>
                   </div>
-
-                  <div className="pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-slate-500 font-bold">
-                    <span>TOURING MANIA OFFICIAL</span>
-                    <span className="text-cyan-400 animate-pulse">TAP TO FLIP</span>
-                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Close Button */}
-            <button
-              onClick={() => setShowModal(false)}
-              className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-2 rounded-lg transition-colors"
-            >
-              閉じる
-            </button>
+              <Button onClick={() => setShowModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black text-[10px] tracking-widest py-6 rounded-xl uppercase border border-white/5 shadow-lg">CLOSE MODULE</Button>
+            </div>
           </Card>
         </div>
       )}
