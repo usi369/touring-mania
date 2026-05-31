@@ -355,19 +355,18 @@ export const gameRouter = router({
           throw new Error(`前回と同じ宣言（${input.spec} ${input.direction}）はできません`);
         }
 
-        const turnOrder = [1, 2, 3, 4].slice(0, game.playerCount);
-        const nextPlayer = getNextPlayer(game.declarationPlayer || 1, game.playerCount, turnOrder);
+        const currentDeclarationPlayer = game.declarationPlayer || 1;
 
         await db.update(games).set({
           declaredSpec: input.spec,
           declaredDirection: input.direction,
-          currentTurn: nextPlayer,
+          currentTurn: currentDeclarationPlayer,
         }).where(eq(games.id, input.gameId));
 
 
 
 
-        return { success: true, spec: input.spec, direction: input.direction, nextPlayer };
+        return { success: true, spec: input.spec, direction: input.direction, nextPlayer: currentDeclarationPlayer };
       } catch (error) {
         console.error("Error declaring spec:", error);
         throw error;
