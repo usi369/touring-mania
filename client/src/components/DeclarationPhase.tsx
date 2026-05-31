@@ -61,6 +61,10 @@ export default function DeclarationPhase({
   const selectedSpecLabel =
     SPEC_OPTIONS.find((s) => s.value === selectedSpec)?.label || "馬力";
 
+  const getSpecValue = (bike: any, spec: SpecType): string | number => {
+    return bike[spec] ?? "-";
+  };
+
   return (
     <>
       {/* ===== メインオーバーレイ ===== */}
@@ -180,9 +184,15 @@ export default function DeclarationPhase({
                         setSelectedSpec(spec.value);
                         setShowDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0 text-xs sm:text-sm"
+                      className="w-full px-4 py-2 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0 text-xs sm:text-sm flex items-center justify-between gap-3"
                     >
-                      {spec.label}
+                      <span className="shrink-0">{spec.label}</span>
+                      <span className="text-xs text-cyan-300 text-right tabular-nums">
+                        {hand.length > 0
+                          ? hand.map((bike) => getSpecValue(bike, spec.value)).join(" / ")
+                          : "-"}
+                        <span className="ml-1 text-slate-400">{spec.unit}</span>
+                      </span>
                     </button>
                   ))}
                 </div>
