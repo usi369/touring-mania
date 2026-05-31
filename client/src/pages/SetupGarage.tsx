@@ -58,10 +58,74 @@ export default function SetupGarage() {
   }
 
   const handleChooseBike = async (bikeId: number) => {
-    // ... previous logic
+    try {
+      setIsSubmitting(true);
+      const res = await setGarageBikeMutation.mutateAsync({ bikeId });
+      if (res.success) {
+        // Refetch garage query to sync state
+        await utils.garage.getGarage.refetch();
+        setLocation("/");
+      }
+    } catch (err) {
+      console.error("Failed to select bike:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // ... (middle of the component)
+  const handleRegisterBike = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !name || !maker || !horsepower || !fuelEfficiency || !weight ||
+      !seatHeight || !totalLength || !year || !price || !displacement
+    ) {
+      setErrorMsg("すべての必須スペック項目を精緻に入力してください。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    // Setup pictogram fallback path
+    const fallbackPhotoUrl = `/pictogram_${bikeStyle}.png`;
+
+    try {
+      const res = await registerGarageBikeMutation.mutateAsync({
+        name,
+        maker,
+        category,
+        cylinders,
+        transmission,
+        horsepower: Number(horsepower),
+        fuelEfficiency: Number(fuelEfficiency),
+        weight: Number(weight),
+        seatHeight: Number(seatHeight),
+        totalLength: Number(totalLength),
+        year: Number(year),
+        price: Number(price),
+        photoUrl: fallbackPhotoUrl,
+        displacement: String(displacement),
+        displacementUnit: "cc",
+        engineType,
+      });
+
+      if (res.success) {
+        await utils.garage.getGarage.refetch();
+        await utils.bike.list.refetch();
+        setLocation("/");
+      }
+    } catch (err: any) {
+      console.error("Failed to register bike:", err);
+      setErrorMsg(err.message || "バイクの登録に失敗しました。入力値を確認してください。");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredBikes = bikesQuery.data?.filter((b: any) => {
+    if (selectedCategory === "all") return true;
+    return b.category === selectedCategory;
+  }) || [];
 
   return (
     <div className="h-full w-full bg-slate-950 text-slate-100 relative overflow-hidden flex flex-col font-sans">
