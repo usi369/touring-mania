@@ -220,21 +220,34 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
-      {/* Title Section */}
-      <div className="flex flex-col items-center justify-center gap-6 mb-12">
-        {/* Logo/Title */}
-        <div className="text-center">
-          <h1 className="text-4xl sm:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 tracking-tight">
-            ツーリングマニア
-          </h1>
-        </div>
-
-        {/* Subtitle */}
-        <p className="text-base sm:text-lg text-slate-300 text-center font-medium">
-          バイクスペックで競う縦型カードゲーム
-        </p>
+    <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-between px-6 py-12 relative overflow-hidden font-sans selection:bg-cyan-500/30">
+      {/* Background decoration for fixed stage */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
+        {/* Animated stars could be added here later */}
       </div>
+
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between">
+        {/* Title Section */}
+        <div className="flex flex-col items-center justify-center gap-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="w-24 h-24 mb-2"
+          >
+            <MotorcycleIcon className="w-full h-full text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+          </motion.div>
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 tracking-tight leading-tight italic uppercase">
+              TOURING MANIA
+            </h1>
+            <p className="text-[10px] text-slate-400 font-bold tracking-[0.4em] uppercase mt-1">
+              Bikers Card Game
+            </p>
+          </div>
+        </div>
 
       {/* Game Info Section */}
       <div className="w-full max-w-sm bg-slate-800/50 border border-cyan-500/30 rounded-lg p-6 mb-8">
