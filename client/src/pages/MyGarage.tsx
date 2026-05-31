@@ -177,15 +177,15 @@ export default function MyGarage() {
   }) || [];
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 relative overflow-hidden flex flex-col font-sans">
+    <div className="h-full w-full bg-slate-950 text-slate-100 relative overflow-hidden flex flex-col font-sans">
       {/* Background Grid Patterns */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
       
       {/* Cyberpunk Scanline */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%] pointer-events-none z-40" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%] pointer-events-none z-40 opacity-30" />
 
-      {/* Top Header Bar */}
-      <div className="z-30 bg-slate-900/90 backdrop-blur-md border-b border-cyan-500/20 px-4 py-3 flex items-center justify-between">
+      {/* Top Header Bar - Fixed height */}
+      <div className="z-30 shrink-0 bg-slate-900/90 backdrop-blur-md border-b border-cyan-500/20 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
             onClick={() => setLocation("/")}
@@ -195,11 +195,10 @@ export default function MyGarage() {
           >
             <Home className="w-5 h-5" />
           </Button>
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-base font-black text-white italic tracking-wider uppercase">MY GARAGE</h1>
-            <div className="h-3 w-px bg-slate-800 mx-1" />
-            <p className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest">
-              {shutterState === "open" ? "ガレージ開放中" : "セキュリティロック中"}
+          <div className="flex flex-col">
+            <h1 className="text-[10px] font-black text-white italic tracking-wider uppercase leading-none mb-1">MY GARAGE</h1>
+            <p className="text-[8px] text-cyan-400 font-bold uppercase tracking-widest leading-none">
+              {shutterState === "open" ? "System Active" : "Security Locked"}
             </p>
           </div>
         </div>
@@ -208,96 +207,124 @@ export default function MyGarage() {
           <Button
             onClick={handleLockGarage}
             variant="outline"
-            className="h-9 text-xs border-pink-500/30 text-pink-400 hover:bg-pink-950/20 hover:text-pink-300 transition-all duration-300"
+            className="h-8 px-2 text-[9px] border-pink-500/30 text-pink-400 hover:bg-pink-950/20 hover:text-pink-300"
           >
-            <LogOut className="w-3.5 h-3.5 mr-1.5" />
-            ガレージを施錠
+            <LogOut className="w-3 h-3 mr-1" />
+            LOCK
           </Button>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col relative justify-center items-center">
+      <div className="flex-1 flex flex-col relative overflow-hidden">
         
         {/* ======================================================== */}
         {/* 1. CLOSED GARAGE (Login Panel & Shutter Closed) */}
         {/* ======================================================== */}
         {shutterState === "closed" && (
-          <div className="w-full max-w-md mx-auto px-4 z-20 flex flex-col justify-center items-center flex-1 py-8">
+          <div className="absolute inset-0 z-20 flex flex-col justify-center items-center px-6">
             {/* Shutter Visual Background (Closed) */}
-            <div className="absolute inset-0 bg-slate-950 flex items-center justify-center pointer-events-none">
-              {/* Metallic Grate Texture */}
+            <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center pointer-events-none">
               <div className="w-full h-full opacity-40 bg-[linear-gradient(to_bottom,transparent_50%,#000_50%)] bg-[size:100%_12px] border-b-8 border-slate-900" />
-              {/* Heavy Shadow Overlap */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,transparent_10%,rgba(2,6,23,0.95)_90%)]" />
             </div>
 
             {/* Garage Door Lock Interface */}
-            <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_30px_rgba(34,211,238,0.05)] backdrop-blur-md relative z-20">
+            <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-2xl backdrop-blur-md relative z-20">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full border border-cyan-500/30 bg-slate-950/80 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
-                  <Key className="w-7 h-7 text-cyan-400 animate-pulse" />
+                <div className="w-14 h-14 rounded-full border border-cyan-500/30 bg-slate-950/80 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
+                  <Key className="w-6 h-6 text-cyan-400 animate-pulse" />
                 </div>
-                <h3 className="text-lg font-bold text-white tracking-wider">ガレージオーナー認証</h3>
-                <p className="text-xs text-slate-400 mt-2">
+                <h3 className="text-sm font-black text-white tracking-widest uppercase">OWNER AUTH</h3>
+                <p className="text-[9px] text-slate-500 mt-2 uppercase tracking-tighter leading-relaxed">
                   {ignitionState === "off" || ignitionState === "key_inserting"
-                    ? "ガレージのセキュリティロックを解除するため、メールアドレスを入力してください。"
-                    : "宛先や本文は変更せず、そのままメールを送信してください。"}
+                    ? "Enter email to unlock garage security."
+                    : "Send email without modifying the body."}
                 </p>
               </div>
 
               {ignitionState === "off" || ignitionState === "key_inserting" ? (
                 <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Owner Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="owner@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-12 px-4 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-cyan-500 font-mono text-sm transition-colors text-center"
-                      disabled={isSending}
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    required
+                    placeholder="owner@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-cyan-500 font-mono text-xs transition-colors text-center"
+                    disabled={isSending}
+                  />
 
                   {errorMessage && (
-                    <p className="text-pink-500 text-xs text-center leading-relaxed">{errorMessage}</p>
+                    <p className="text-pink-500 text-[10px] text-center">{errorMessage}</p>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+                    className="w-full h-11 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white font-black text-xs tracking-widest rounded-xl transition-all"
                     disabled={isSending}
                   >
-                    {isSending ? "キー接続中..." : "オーナー認証キーを発行"}
+                    {isSending ? "CONNECTING..." : "GENERATE KEY"}
                   </Button>
                 </form>
               ) : (
-                <div className="space-y-5">
-                  {/* 認証コードと宛先 */}
+                <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono relative flex flex-col items-center justify-center min-h-[64px]">
-                      <span className="text-slate-500 text-[9px] block mb-0.5">認証コード</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-lg font-black text-cyan-300 tracking-widest">{generatedCode}</span>
-                        <button
-                          onClick={() => copyToClipboard(generatedCode, 'code')}
-                          className="text-slate-500 hover:text-cyan-400 p-1 transition-colors"
-                          title="コードをコピー"
-                          type="button"
-                        >
-                          {copiedCode ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
+                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono flex flex-col items-center justify-center min-h-[50px]">
+                      <span className="text-slate-500 text-[8px] block mb-0.5">CODE</span>
+                      <span className="text-base font-black text-cyan-300 tracking-widest">{generatedCode}</span>
                     </div>
 
-                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono relative flex flex-col items-center justify-center min-h-[64px]">
-                      <span className="text-slate-500 text-[9px] block mb-0.5">送信先メールアドレス (宛先)</span>
-                      <div className="flex items-center gap-1.5 max-w-full">
-                        <span className="text-[10px] font-bold text-slate-300 truncate max-w-[110px]">login@nirin-hub.me</span>
-                        <button
-                          onClick={() => copyToClipboard("login@nirin-hub.me", 'email')}
-                          className="text-slate-500 hover:text-cyan-400 p-1 flex-shrink-0 transition-colors"
+                    <div className="bg-slate-950 border border-slate-800 p-2 rounded-lg text-center font-mono flex flex-col items-center justify-center min-h-[50px]">
+                      <span className="text-slate-500 text-[8px] block mb-0.5">TARGET</span>
+                      <span className="text-[8px] font-bold text-slate-400 truncate w-full">login@nirin-hub.me</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/50 border border-cyan-500/10 p-3 rounded-lg text-[9px] text-slate-400 leading-tight">
+                    <p>1. Send mail with generated key.</p>
+                    <p>2. Return to this screen.</p>
+                    <p>3. Tap "CONFIRM SENT" button.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <a
+                      href={`mailto:login@nirin-hub.me?subject=Garage Key: ${generatedCode}&body=Please send this email to unlock.%0D%0AKey: ${generatedCode}`}
+                      className="w-full h-11 flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 text-white font-black rounded-xl transition-all text-[11px] tracking-widest uppercase shadow-lg shadow-cyan-900/20"
+                    >
+                      SEND EMAIL KEY
+                    </a>
+
+                    {!hasClickedSent ? (
+                      <Button
+                        onClick={() => setHasClickedSent(true)}
+                        className="w-full h-11 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-[10px] tracking-widest uppercase"
+                      >
+                        CONFIRM SENT
+                      </Button>
+                    ) : (
+                      <div className="w-full h-11 flex items-center justify-center bg-slate-950/50 rounded-xl text-cyan-500/70 text-[10px] gap-2 font-black italic">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        SYNCING SECURITY...
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={() => {
+                      setIgnitionState("off");
+                      setGeneratedCode("");
+                      setHasClickedSent(false);
+                    }}
+                    variant="ghost"
+                    className="w-full text-slate-600 hover:text-white text-[9px] tracking-widest"
+                  >
+                    CANCEL
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
                           title="宛先をコピー"
                           type="button"
                         >

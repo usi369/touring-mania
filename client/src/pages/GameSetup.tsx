@@ -27,78 +27,81 @@ export default function GameSetup() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
-      {/* Header */}
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold text-white mb-2">プレイヤー選択</h1>
-        <p className="text-slate-400">何人でプレイしますか？</p>
+    <div className="h-full w-full bg-slate-950 flex flex-col items-center px-6 py-10 relative overflow-hidden font-sans">
+      {/* Background decoration */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-cyan-500/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl" />
       </div>
 
-      {/* Player Count Options */}
-      <div className="w-full max-w-sm space-y-4 mb-8">
-        {/* 2 Players */}
-        <button
-          onClick={() => handleStartGame(2)}
-          disabled={selectedPlayers === 2 || createGameMutation.isPending}
-          className="w-full p-6 bg-slate-800/50 border-2 border-cyan-500/30 hover:border-cyan-500 rounded-lg transition-all duration-300 hover:bg-slate-800 disabled:opacity-75"
-        >
-          <div className="flex items-center justify-between">
+      <div className="relative z-10 w-full h-full flex flex-col justify-between">
+        {/* Header */}
+        <div className="text-center pt-4">
+          <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase mb-1">PLAYER SELECT</h1>
+          <p className="text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">How many players?</p>
+        </div>
+
+        {/* Player Count Options */}
+        <div className="w-full space-y-4">
+          {/* 2 Players */}
+          <button
+            onClick={() => handleStartGame(2)}
+            disabled={selectedPlayers === 2 || createGameMutation.isPending}
+            className="w-full p-5 bg-slate-900/60 border-2 border-cyan-500/30 hover:border-cyan-500 rounded-2xl transition-all duration-300 group hover:bg-slate-800 disabled:opacity-75 flex items-center justify-between"
+          >
             <div className="text-left">
-              <p className="text-xl font-bold text-white">2人</p>
-              <p className="text-sm text-slate-400">あなた vs CPU</p>
+              <p className="text-lg font-black text-white italic uppercase leading-none mb-1">2 Players</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">You vs CPU</p>
             </div>
-            <div className="text-3xl">👤👤</div>
-          </div>
-        </button>
+            <div className="text-2xl group-hover:scale-110 transition-transform">👤👤</div>
+          </button>
 
-        {/* 3 Players */}
-        <button
-          onClick={() => handleStartGame(3)}
-          disabled={selectedPlayers === 3 || createGameMutation.isPending}
-          className="w-full p-6 bg-slate-800/50 border-2 border-pink-500/30 hover:border-pink-500 rounded-lg transition-all duration-300 hover:bg-slate-800 disabled:opacity-75"
-        >
-          <div className="flex items-center justify-between">
+          {/* 3 Players */}
+          <button
+            onClick={() => handleStartGame(3)}
+            disabled={selectedPlayers === 3 || createGameMutation.isPending}
+            className="w-full p-5 bg-slate-900/60 border-2 border-pink-500/30 hover:border-pink-500 rounded-2xl transition-all duration-300 group hover:bg-slate-800 disabled:opacity-75 flex items-center justify-between"
+          >
             <div className="text-left">
-              <p className="text-xl font-bold text-white">3人</p>
-              <p className="text-sm text-slate-400">あなた + CPU 2人</p>
+              <p className="text-lg font-black text-white italic uppercase leading-none mb-1">3 Players</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">You + CPU 2</p>
             </div>
-            <div className="text-3xl">👤👤👤</div>
-          </div>
-        </button>
+            <div className="text-2xl group-hover:scale-110 transition-transform">👤👤👤</div>
+          </button>
 
-        {/* 4 Players */}
-        <button
-          onClick={() => handleStartGame(4)}
-          disabled={selectedPlayers === 4 || createGameMutation.isPending}
-          className="w-full p-6 bg-slate-800/50 border-2 border-purple-500/30 hover:border-purple-500 rounded-lg transition-all duration-300 hover:bg-slate-800 disabled:opacity-75"
-        >
-          <div className="flex items-center justify-between">
+          {/* 4 Players */}
+          <button
+            onClick={() => handleStartGame(4)}
+            disabled={selectedPlayers === 4 || createGameMutation.isPending}
+            className="w-full p-5 bg-slate-900/60 border-2 border-purple-500/30 hover:border-purple-500 rounded-2xl transition-all duration-300 group hover:bg-slate-800 disabled:opacity-75 flex items-center justify-between"
+          >
             <div className="text-left">
-              <p className="text-xl font-bold text-white">4人</p>
-              <p className="text-sm text-slate-400">あなた + CPU 3人</p>
+              <p className="text-lg font-black text-white italic uppercase leading-none mb-1">4 Players</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">You + CPU 3</p>
             </div>
-            <div className="text-3xl">👤👤👤👤</div>
+            <div className="text-2xl group-hover:scale-110 transition-transform">👤👤👤👤</div>
+          </button>
+        </div>
+
+        {/* Footer Info & Back */}
+        <div className="w-full space-y-6">
+          <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4">
+            <h3 className="text-[10px] font-black text-cyan-400 mb-2 uppercase tracking-widest">Game Rules</h3>
+            <ul className="text-[9px] text-slate-500 space-y-1.5 font-bold uppercase leading-relaxed">
+              <li>• 13 Cards per player</li>
+              <li>• Prev winner declares spec</li>
+              <li>• Last survivor wins</li>
+            </ul>
           </div>
-        </button>
-      </div>
 
-      {/* Back Button */}
-      <Button
-        onClick={() => setLocation("/")}
-        variant="outline"
-        className="w-full max-w-sm border-slate-600 text-slate-300 hover:bg-slate-800"
-      >
-        戻る
-      </Button>
-
-      {/* Game Rules Info */}
-      <div className="mt-12 w-full max-w-sm bg-slate-800/30 border border-slate-700 rounded-lg p-4">
-        <h3 className="text-sm font-bold text-cyan-400 mb-2">ゲームルール</h3>
-        <ul className="text-xs text-slate-400 space-y-1">
-          <li>• 各プレイヤーに13枚のカードが配られます</li>
-          <li>• 前のラウンドの勝者がスペックを宣言します</li>
-          <li>• 最後まで生き残ったプレイヤーが勝者です</li>
-        </ul>
+          <Button
+            onClick={() => setLocation("/")}
+            variant="ghost"
+            className="w-full text-slate-600 hover:text-white text-[10px] font-black tracking-[0.4em] uppercase"
+          >
+            BACK TO MENU
+          </Button>
+        </div>
       </div>
     </div>
   );

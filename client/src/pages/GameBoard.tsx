@@ -457,12 +457,12 @@ export default function GameBoard() {
 
   // Main Render Logic
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-200 relative overflow-hidden flex flex-col font-sans">
+    <div className="h-full w-full bg-[#020617] text-slate-200 relative overflow-hidden flex flex-col font-sans">
       {/* Background Cyberpunk Effect */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.05)_0%,_transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(34,211,238,0.05)_0%,_transparent_70%)] pointer-events-none" />
 
       {loading || !gameState ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 relative z-10">
           <Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
           <p className="text-cyan-400 font-black tracking-widest animate-pulse">LOADING SYSTEM...</p>
         </div>
@@ -782,7 +782,7 @@ export default function GameBoard() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[90] flex items-center justify-center"
+            className="absolute inset-0 z-[90] flex items-center justify-center"
             style={{ background: 'rgba(2,6,23,0.75)', backdropFilter: 'blur(3px)' }}
           >
             {cpuDeclarationAnim.phase === 'thinking' ? (

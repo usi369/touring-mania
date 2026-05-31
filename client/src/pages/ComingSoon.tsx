@@ -62,71 +62,66 @@ export default function ComingSoon() {
   ];
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-12 overflow-hidden relative">
+    <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center px-6 py-10 overflow-hidden relative font-sans">
       {/* Background Orbs */}
       <div className="absolute top-1/4 -left-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" />
       <div className="absolute bottom-1/4 -right-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
-      <div className="w-full max-w-lg z-10">
+      <div className="w-full max-w-sm z-10 flex flex-col items-center">
         {/* Header Section */}
-        <div className="text-center mb-10">
-          <div className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-bold mb-4 animate-bounce">
+        <div className="text-center mb-8">
+          <div className="inline-block px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black mb-4 animate-bounce uppercase tracking-widest">
             COMING SOON
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 leading-tight">
-            ログイン機能・新機能 <br />
+          <h1 className="text-2xl font-black text-white mb-3 leading-tight italic uppercase tracking-tighter">
+            System Expansion <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500">
-              絶賛開発中です！
+              Under Development
             </span>
           </h1>
-          <p className="text-slate-400 text-base">
-            ログインすると以下のことができるようになります。<br />
-            いいねボタンを押して待っててね。
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+            New features are being synced.<br />
+            Support development with a Like!
           </p>
         </div>
 
         {/* Feature List */}
-        <div className="grid gap-4 mb-10">
+        <div className="w-full space-y-3 mb-8 overflow-y-auto no-scrollbar max-h-[300px] px-1">
           {features.map((f, i) => (
-            <Card key={i} className="bg-slate-800/50 border-slate-700 hover:border-cyan-500/50 transition-all duration-300 group">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-slate-700/50 group-hover:scale-110 transition-transform">
-                  {f.icon}
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-sm sm:text-base">{f.title}</h3>
-                  <p className="text-slate-400 text-xs sm:text-sm">{f.description}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div key={i} className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl flex items-center gap-4 group">
+              <div className="p-2.5 rounded-lg bg-slate-800 group-hover:scale-110 transition-transform">
+                {f.icon}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-white font-black text-[11px] italic uppercase leading-none">{f.title}</h3>
+                <p className="text-slate-500 text-[9px] font-bold mt-1 uppercase leading-tight line-clamp-2">{f.description}</p>
+              </div>
+            </div>
           ))}
         </div>
 
         {/* Interaction Section */}
-        <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-4">
           <button
             onClick={handleLike}
             disabled={isThanking}
             className={`flex flex-col items-center gap-2 transition-all duration-300 ${isThanking ? 'opacity-80' : 'hover:scale-105 active:scale-95'}`}
           >
-            <div className={`p-6 rounded-full border-2 transition-all duration-500 ${isThanking ? 'bg-pink-500 border-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.5)] scale-110' : 'bg-slate-800 border-slate-700 hover:border-pink-500/50'}`}>
-              <Heart className={`w-10 h-10 ${isThanking ? 'text-white fill-white' : 'text-pink-500'}`} />
+            <div className={`p-4 rounded-full border-2 transition-all duration-500 ${isThanking ? 'bg-pink-500 border-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.5)] scale-110' : 'bg-slate-800 border-slate-700 hover:border-pink-500/50'}`}>
+              <Heart className={`w-8 h-8 ${isThanking ? 'text-white fill-white' : 'text-pink-500'}`} />
             </div>
-            <span className="text-slate-300 font-bold text-lg">
-              {likeCount} <span className="text-sm font-normal text-slate-500">Likes</span>
+            <span className="text-slate-300 font-black text-sm italic">
+              {likeCount} <span className="text-[10px] font-bold text-slate-500 uppercase not-italic">Likes</span>
             </span>
-            {isThanking && (
-              <span className="text-[10px] text-pink-400 font-bold animate-pulse">Thank you!</span>
-            )}
           </button>
 
           <Button
             variant="ghost"
             onClick={() => setLocation("/")}
-            className="text-slate-400 hover:text-white flex items-center gap-2 mt-4"
+            className="text-slate-600 hover:text-white flex items-center gap-2 mt-2 text-[10px] font-black tracking-widest uppercase"
           >
-            <ArrowLeft className="w-4 h-4" />
-            トップ画面へ戻る
+            <ArrowLeft className="w-3 h-3" />
+            BACK TO TOP
           </Button>
         </div>
       </div>

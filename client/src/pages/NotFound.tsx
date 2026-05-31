@@ -11,42 +11,39 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardContent className="pt-8 pb-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-red-500" />
-            </div>
+    <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden font-sans">
+      {/* Background Cyberpunk Effect */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(236,72,153,0.1)_0%,_transparent_70%)]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm flex flex-col items-center text-center">
+        <div className="mb-8">
+          <div className="relative">
+            <div className="absolute inset-0 bg-pink-500/20 rounded-full blur-3xl animate-pulse" />
+            <AlertCircle className="relative h-24 w-24 text-pink-500 drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]" />
           </div>
+        </div>
 
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">404</h1>
+        <h1 className="text-6xl font-black text-white italic tracking-tighter mb-2 italic">404</h1>
+        <h2 className="text-xl font-bold text-slate-300 uppercase tracking-widest mb-6">
+          System Error: <span className="text-pink-500">Route Not Found</span>
+        </h2>
 
-          <h2 className="text-xl font-semibold text-slate-700 mb-4">
-            Page Not Found
-          </h2>
+        <p className="text-slate-500 text-[11px] font-bold uppercase leading-relaxed mb-10 max-w-[240px]">
+          The requested data segment does not exist or has been relocated to another sector.
+        </p>
 
-          <p className="text-slate-600 mb-8 leading-relaxed">
-            Sorry, the page you are looking for doesn't exist.
-            <br />
-            It may have been moved or deleted.
-          </p>
-
-          <div
-            id="not-found-button-group"
-            className="flex flex-col sm:flex-row gap-3 justify-center"
-          >
-            <Button
-              onClick={handleGoHome}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Go Home
-            </Button>
+        <Button
+          onClick={handleGoHome}
+          className="group relative h-14 px-10 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-black text-sm rounded-xl shadow-lg transition-all uppercase tracking-widest"
+        >
+          <div className="flex items-center gap-3">
+            <Home className="w-4 h-4" />
+            <span>Emergency Abort</span>
           </div>
-        </CardContent>
-      </Card>
+        </Button>
+      </div>
     </div>
   );
 }
