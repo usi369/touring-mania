@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { Loader2, Sparkles, AlertCircle } from "lucide-react";
+import GameButton from "./ui/GameButton";
 
 interface DiceRollDialogProps {
   playerCount: number;
@@ -17,6 +18,10 @@ interface PlayerDice {
   isEliminated: boolean;
 }
 
+/**
+ * DiceRollDialog - Impact-driven turn determination.
+ * Logical design: Use physical shock and anticipation to frame "Luck".
+ */
 export default function DiceRollDialog({
   playerCount,
   onRollComplete,
@@ -26,8 +31,9 @@ export default function DiceRollDialog({
   const [isRolling, setIsRolling] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [rerollMessage, setRerollMessage] = useState<string | null>(null);
-  const [rerollCount, setRerollCount] = useState(0);
   const [resolved, setResolved] = useState(false);
+  
+  const controls = useAnimation();
 
   useEffect(() => {
     if (isOpen) {
@@ -35,7 +41,7 @@ export default function DiceRollDialog({
       for (let i = 1; i <= playerCount; i++) {
         players.push({
           playerId: i,
-          playerName: i === 1 ? "You" : `Player ${i}`,
+          playerName: i === 1 ? "YOU" : `P${i}`,
           diceValue: 0,
           isRolling: false,
           isTied: false,
@@ -45,17 +51,22 @@ export default function DiceRollDialog({
       setPlayerDices(players);
       setShowResults(false);
       setRerollMessage(null);
-      setRerollCount(0);
       setResolved(false);
     }
   }, [isOpen, playerCount]);
+
+  const triggerShake = async () => {
+    await controls.start({
+      x: [-2, 2, -2, 2, 0],
+      transition: { duration: 0.2 }
+    });
+  };
 
   const rollForPlayers = useCallback((playersToRoll: PlayerDice[], allPlayers: PlayerDice[]) => {
     setIsRolling(true);
     setShowResults(false);
     setRerollMessage(null);
 
-    // Mark rolling players
     setPlayerDices(
       allPlayers.map((p) => ({
         ...p,
@@ -64,23 +75,20 @@ export default function DiceRollDialog({
       }))
     );
 
-    const animationDuration = 1500;
+    // Fast rolling visual
     const rollInterval = setInterval(() => {
       setPlayerDices((prev) =>
         prev.map((p) => {
-          if (!playersToRoll.some((r) => r.playerId === p.playerId)) return p;
-          return {
-            ...p,
-            diceValue: Math.floor(Math.random() * 6) + 1,
-          };
+          if (!p.isRolling) return p;
+          return { ...p, diceValue: Math.floor(Math.random() * 6) + 1 };
         })
       );
-    }, 100);
+    }, 80);
 
     setTimeout(() => {
       clearInterval(rollInterval);
+      triggerShake(); // Impact!
 
-      // Generate final dice values for rolling players
       const finalValues: Record<number, number> = {};
       playersToRoll.forEach((p) => {
         finalValues[p.playerId] = Math.floor(Math.random() * 6) + 1;
@@ -93,13 +101,11 @@ export default function DiceRollDialog({
           diceValue: finalValues[p.playerId] !== undefined ? finalValues[p.playerId] : p.diceValue,
         }));
 
-        // Check for ties among the highest value
         const activePlayers = updated.filter((p) => !p.isEliminated);
         const maxValue = Math.max(...activePlayers.map((p) => p.diceValue));
         const tiedPlayers = activePlayers.filter((p) => p.diceValue === maxValue);
 
         if (tiedPlayers.length > 1) {
-          // Mark tied players
           const withTies = updated.map((p) => ({
             ...p,
             isTied: tiedPlayers.some((t) => t.playerId === p.playerId),
@@ -108,193 +114,145 @@ export default function DiceRollDialog({
           setPlayerDices(withTies);
           setShowResults(true);
           setIsRolling(false);
-          setRerollMessage(
-            `${tiedPlayers.map((p) => p.playerName).join(" と ")} が同点（${maxValue}）です！再度振ります…`
-          );
+          setRerollMessage("TIE DETECTED - REROLLING SECONDS...");
 
-          // Auto re-roll after a delay
           setTimeout(() => {
-            setRerollCount((c) => c + 1);
-
-            // Eliminate non-tied active players (they lost)
             const nextAll = withTies.map((p) => ({
               ...p,
               isEliminated: p.isEliminated || (!tiedPlayers.some((t) => t.playerId === p.playerId) && !p.isEliminated && activePlayers.some((a) => a.playerId === p.playerId)),
               isTied: false,
             }));
-
-            const nextRollers = nextAll.filter(
-              (p) => tiedPlayers.some((t) => t.playerId === p.playerId)
-            );
-
+            const nextRollers = nextAll.filter(p => tiedPlayers.some(t => t.playerId === p.playerId));
             rollForPlayers(nextRollers, nextAll);
           }, 2000);
         } else {
-          // No tie - we have a winner
           setShowResults(true);
           setIsRolling(false);
           setResolved(true);
         }
-
         return updated;
       });
-    }, animationDuration);
-  }, []);
+    }, 1200);
+  }, [controls]);
 
   const handleRollDice = () => {
     if (resolved) {
-      // Already resolved - finalize
       const activePlayers = playerDices.filter((p) => !p.isEliminated);
       const maxValue = Math.max(...activePlayers.map((p) => p.diceValue));
-
       const diceRolls: Record<number, number> = {};
-      playerDices.forEach((p) => {
-        diceRolls[p.playerId] = p.diceValue;
-      });
-
-      // Build turn order: winner first, then others sorted by dice value desc
+      playerDices.forEach((p) => { diceRolls[p.playerId] = p.diceValue; });
       const winner = activePlayers.find((p) => p.diceValue === maxValue)!;
-      const others = playerDices
-        .filter((p) => p.playerId !== winner.playerId)
-        .sort((a, b) => b.diceValue - a.diceValue);
-
+      const others = playerDices.filter((p) => p.playerId !== winner.playerId).sort((a, b) => b.diceValue - a.diceValue);
       const turnOrder = [winner.playerId, ...others.map((p) => p.playerId)];
-      const declarationPlayer = turnOrder[0];
-
-      onRollComplete(diceRolls, turnOrder, declarationPlayer);
+      onRollComplete(diceRolls, turnOrder, turnOrder[0]);
       return;
     }
-
-    // First roll - roll for all players
     rollForPlayers(playerDices, playerDices);
   };
 
   if (!isOpen) return null;
 
-  // Sort players for display: active first, then eliminated
-  const activePlayers = playerDices.filter((p) => !p.isEliminated);
-  const eliminatedPlayers = playerDices.filter((p) => p.isEliminated);
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-900 border border-cyan-500/50 rounded-lg p-8 max-w-md w-full mx-4">
-        <h2 className="text-2xl font-bold text-white mb-2 text-center">
-          サイコロを振る
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl overflow-hidden font-sans">
+      
+      {/* 1. Arena Header */}
+      <div className="text-center mb-10 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="inline-block px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-500 text-[9px] font-black tracking-[0.4em] uppercase mb-4"
+        >
+          Priority Conflict
+        </motion.div>
+        <h2 className="text-3xl font-black text-white italic tracking-tighter uppercase leading-none">
+          Determine <span className="text-cyan-400">Order</span>
         </h2>
-        {rerollCount > 0 && (
-          <p className="text-xs text-slate-400 text-center mb-4">
-            再ロール: {rerollCount}回目
-          </p>
-        )}
+      </div>
 
-        {/* Re-roll Message */}
-        {rerollMessage && (
-          <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-            <p className="text-sm text-yellow-300 text-center font-semibold">
-              {rerollMessage}
-            </p>
-          </div>
-        )}
-
-        {/* Dice Display */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          {activePlayers.map((player) => (
-            <div
+      {/* 2. Dice Pit */}
+      <motion.div 
+        animate={controls}
+        className="w-full max-w-sm grid grid-cols-2 gap-4 mb-8"
+      >
+        <AnimatePresence mode="popLayout">
+          {playerDices.filter(p => !p.isEliminated).map((player) => (
+            <motion.div
               key={player.playerId}
-              className={`bg-slate-800/50 border rounded-lg p-4 flex flex-col items-center justify-center aspect-square transition-all ${
-                player.isTied
-                  ? "border-yellow-500 bg-yellow-500/10"
-                  : resolved && player.diceValue === Math.max(...activePlayers.map((p) => p.diceValue))
-                  ? "border-cyan-400 bg-cyan-500/10"
-                  : "border-slate-700"
-              }`}
+              layout
+              initial={{ scale: 0, y: -100, rotate: -45 }}
+              animate={{ 
+                scale: 1, y: 0, rotate: 0,
+                borderColor: player.isTied ? "rgba(234,179,8,0.5)" : "rgba(34,211,238,0.2)"
+              }}
+              className={`relative bg-slate-900/60 border-2 rounded-3xl p-5 flex flex-col items-center justify-center aspect-square shadow-2xl overflow-hidden ${player.isTied ? 'bg-yellow-500/5' : ''}`}
             >
-              <p className="text-sm text-slate-400 mb-2">{player.playerName}</p>
-              <div className="text-4xl font-bold text-cyan-400 mb-2 h-12 flex items-center justify-center">
-                {player.isRolling ? (
-                  <span className="animate-bounce">{player.diceValue || "?"}</span>
-                ) : (
-                  player.diceValue || "?"
-                )}
-              </div>
-              {player.isRolling && (
-                <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-              )}
-              {player.isTied && !player.isRolling && (
-                <span className="text-xs text-yellow-400 font-semibold">同点！</span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Eliminated Players */}
-        {eliminatedPlayers.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-slate-500 mb-2">確定済み:</p>
-            <div className="flex gap-2 flex-wrap">
-              {eliminatedPlayers.map((player) => (
-                <div
-                  key={player.playerId}
-                  className="bg-slate-800/30 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2"
-                >
-                  <span className="text-xs text-slate-500">{player.playerName}</span>
-                  <span className="text-sm font-bold text-slate-500">{player.diceValue}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Results */}
-        {showResults && resolved && (
-          <div className="mb-6 p-4 bg-slate-800/30 border border-cyan-500/30 rounded-lg">
-            <p className="text-sm text-slate-400 mb-2">ターン順序:</p>
-            <div className="space-y-1">
-              {[...playerDices]
-                .sort((a, b) => {
-                  // Winner (active with max) first, then by dice desc
-                  const aActive = !a.isEliminated;
-                  const bActive = !b.isEliminated;
-                  if (aActive && !bActive) return -1;
-                  if (!aActive && bActive) return 1;
-                  return b.diceValue - a.diceValue;
-                })
-                .map((player, index) => (
-                  <div
-                    key={player.playerId}
-                    className="text-sm text-white flex justify-between"
+              {/* Background Rank Number */}
+              <span className="absolute -bottom-4 -right-2 text-6xl font-black text-white/5 italic select-none">#{player.playerId}</span>
+              
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 z-10">{player.playerName}</p>
+              
+              <div className="relative h-20 w-20 flex items-center justify-center z-10">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={player.diceValue}
+                    initial={{ y: player.isRolling ? 0 : 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className={`text-6xl font-black italic tracking-tighter ${player.isRolling ? 'text-cyan-500 animate-pulse' : player.isTied ? 'text-yellow-400' : 'text-white'}`}
+                    style={{ textShadow: player.isRolling ? '0 0 20px rgba(34,211,238,0.4)' : 'none' }}
                   >
-                    <span>
-                      {index + 1}. {player.playerName}
-                      {index === 0 && " 👑"}
-                    </span>
-                    <span className="text-cyan-400 font-bold">
-                      {player.diceValue}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+                    {player.diceValue || "?"}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
 
-        {/* Button */}
-        <Button
+              {player.isTied && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  className="absolute inset-0 flex items-center justify-center bg-yellow-500/10 pointer-events-none"
+                >
+                   <div className="px-2 py-0.5 bg-yellow-500 text-slate-950 text-[8px] font-black uppercase rounded transform -rotate-12">Conflict</div>
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* 3. Feedback and Action */}
+      <div className="w-full max-w-sm space-y-6">
+        <AnimatePresence mode="wait">
+          {rerollMessage ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-3"
+            >
+              <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
+              <p className="text-[10px] font-bold text-yellow-200 uppercase tracking-tight leading-tight">{rerollMessage}</p>
+            </motion.div>
+          ) : resolved ? (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-cyan-500/10 border border-cyan-500/30 p-3 rounded-xl flex items-center justify-center gap-3"
+            >
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <p className="text-[10px] font-black text-cyan-100 uppercase tracking-widest">Sequence Confirmed</p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <GameButton
           onClick={handleRollDice}
           disabled={isRolling}
-          className="w-full bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white font-bold py-3 rounded-lg"
+          variant={resolved ? "primary" : "secondary"}
+          className="w-full py-4 text-sm"
         >
-          {isRolling ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              振っています...
-            </>
-          ) : resolved ? (
-            "次へ進む"
-          ) : (
-            "サイコロを振る"
-          )}
-        </Button>
+          {isRolling ? "CALCULATING..." : resolved ? "INITIALIZE MATCH" : "INITIATE ROLL"}
+        </GameButton>
       </div>
+
+      {/* Static Juice Decorations */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500/20 to-transparent" />
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
     </div>
   );
 }
