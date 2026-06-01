@@ -2,334 +2,171 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Loader2, Send, User, Sparkles } from "lucide-react";
+import { Loader2, Send, User, Sparkles, Activity, Terminal } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Streamdown } from "streamdown";
+import { motion, AnimatePresence } from "framer-motion";
 
-/**
- * Message type matching server-side LLM Message interface
- */
 export type Message = {
   role: "system" | "user" | "assistant";
   content: string;
 };
 
 export type AIChatBoxProps = {
-  /**
-   * Messages array to display in the chat.
-   * Should match the format used by invokeLLM on the server.
-   */
   messages: Message[];
-
-  /**
-   * Callback when user sends a message.
-   * Typically you'll call a tRPC mutation here to invoke the LLM.
-   */
   onSendMessage: (content: string) => void;
-
-  /**
-   * Whether the AI is currently generating a response
-   */
   isLoading?: boolean;
-
-  /**
-   * Placeholder text for the input field
-   */
   placeholder?: string;
-
-  /**
-   * Custom className for the container
-   */
   className?: string;
-
-  /**
-   * Height of the chat box (default: 600px)
-   */
   height?: string | number;
-
-  /**
-   * Empty state message to display when no messages
-   */
   emptyStateMessage?: string;
-
-  /**
-   * Suggested prompts to display in empty state
-   * Click to send directly
-   */
-  suggestedPrompts?: string[];
 };
 
 /**
- * A ready-to-use AI chat box component that integrates with the LLM system.
- *
- * Features:
- * - Matches server-side Message interface for seamless integration
- * - Markdown rendering with Streamdown
- * - Auto-scrolls to latest message
- * - Loading states
- * - Uses global theme colors from index.css
- *
- * @example
- * ```tsx
- * const ChatPage = () => {
- *   const [messages, setMessages] = useState<Message[]>([
- *     { role: "system", content: "You are a helpful assistant." }
- *   ]);
- *
- *   const chatMutation = trpc.ai.chat.useMutation({
- *     onSuccess: (response) => {
- *       // Assuming your tRPC endpoint returns the AI response as a string
- *       setMessages(prev => [...prev, {
- *         role: "assistant",
- *         content: response
- *       }]);
- *     },
- *     onError: (error) => {
- *       console.error("Chat error:", error);
- *       // Optionally show error message to user
- *     }
- *   });
- *
- *   const handleSend = (content: string) => {
- *     const newMessages = [...messages, { role: "user", content }];
- *     setMessages(newMessages);
- *     chatMutation.mutate({ messages: newMessages });
- *   };
- *
- *   return (
- *     <AIChatBox
- *       messages={messages}
- *       onSendMessage={handleSend}
- *       isLoading={chatMutation.isPending}
- *       suggestedPrompts={[
- *         "Explain quantum computing",
- *         "Write a hello world in Python"
- *       ]}
- *     />
- *   );
- * };
- * ```
+ * AIChatBox - On-board AI Navigator.
+ * Logical design: Functional Storytelling. AI as a machine co-pilot.
  */
 export function AIChatBox({
   messages,
   onSendMessage,
   isLoading = false,
-  placeholder = "Type your message...",
+  placeholder = "Communicate with System AI...",
   className,
-  height = "600px",
-  emptyStateMessage = "Start a conversation with AI",
-  suggestedPrompts,
+  height = "500px",
+  emptyStateMessage = "Initialize AI Link Protocol",
 }: AIChatBoxProps) {
   const [input, setInput] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputAreaRef = useRef<HTMLFormElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Filter out system messages
   const displayMessages = messages.filter((msg) => msg.role !== "system");
 
-  // Calculate min-height for last assistant message to push user message to top
-  const [minHeightForLastMessage, setMinHeightForLastMessage] = useState(0);
-
-  useEffect(() => {
-    if (containerRef.current && inputAreaRef.current) {
-      const containerHeight = containerRef.current.offsetHeight;
-      const inputHeight = inputAreaRef.current.offsetHeight;
-      const scrollAreaHeight = containerHeight - inputHeight;
-
-      // Reserve space for:
-      // - padding (p-4 = 32px top+bottom)
-      // - user message: 40px (item height) + 16px (margin-top from space-y-4) = 56px
-      // Note: margin-bottom is not counted because it naturally pushes the assistant message down
-      const userMessageReservedHeight = 56;
-      const calculatedHeight = scrollAreaHeight - 32 - userMessageReservedHeight;
-
-      setMinHeightForLastMessage(Math.max(0, calculatedHeight));
-    }
-  }, []);
-
-  // Scroll to bottom helper function with smooth animation
   const scrollToBottom = () => {
-    const viewport = scrollAreaRef.current?.querySelector(
-      '[data-radix-scroll-area-viewport]'
-    ) as HTMLDivElement;
-
+    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
     if (viewport) {
-      requestAnimationFrame(() => {
-        viewport.scrollTo({
-          top: viewport.scrollHeight,
-          behavior: 'smooth'
-        });
-      });
+      viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
     }
   };
+
+  useEffect(() => { scrollToBottom(); }, [messages, isLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) return;
-
-    onSendMessage(trimmedInput);
+    if (!input.trim() || isLoading) return;
+    onSendMessage(input.trim());
     setInput("");
-
-    // Scroll immediately after sending
-    scrollToBottom();
-
-    // Keep focus on input
-    textareaRef.current?.focus();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
   };
 
   return (
     <div
-      ref={containerRef}
       className={cn(
-        "flex flex-col bg-card text-card-foreground rounded-lg border shadow-sm",
+        "flex flex-col bg-slate-950/90 border-2 border-white/5 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl relative font-mono",
         className
       )}
       style={{ height }}
     >
-      {/* Messages Area */}
-      <div ref={scrollAreaRef} className="flex-1 overflow-hidden">
-        {displayMessages.length === 0 ? (
-          <div className="flex h-full flex-col p-4">
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 text-muted-foreground">
-              <div className="flex flex-col items-center gap-3">
-                <Sparkles className="size-12 opacity-20" />
-                <p className="text-sm">{emptyStateMessage}</p>
-              </div>
-
-              {suggestedPrompts && suggestedPrompts.length > 0 && (
-                <div className="flex max-w-2xl flex-wrap justify-center gap-2">
-                  {suggestedPrompts.map((prompt, index) => (
-                    <button
-                      key={index}
-                      onClick={() => onSendMessage(prompt)}
-                      disabled={isLoading}
-                      className="rounded-lg border border-border bg-card px-4 py-2 text-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* 1. AI HUD Header */}
+      <div className="bg-slate-900/80 px-5 py-3 border-b border-white/5 flex justify-between items-center shrink-0 relative">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Activity className={cn("w-4 h-4 text-cyan-400", isLoading && "animate-pulse")} />
+            {isLoading && <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-md animate-ping" />}
           </div>
-        ) : (
-          <ScrollArea className="h-full">
-            <div className="flex flex-col space-y-4 p-4">
-              {displayMessages.map((message, index) => {
-                // Apply min-height to last message only if NOT loading (when loading, the loading indicator gets it)
-                const isLastMessage = index === displayMessages.length - 1;
-                const shouldApplyMinHeight =
-                  isLastMessage && !isLoading && minHeightForLastMessage > 0;
-
-                return (
-                  <div
-                    key={index}
-                    className={cn(
-                      "flex gap-3",
-                      message.role === "user"
-                        ? "justify-end items-start"
-                        : "justify-start items-start"
-                    )}
-                    style={
-                      shouldApplyMinHeight
-                        ? { minHeight: `${minHeightForLastMessage}px` }
-                        : undefined
-                    }
-                  >
-                    {message.role === "assistant" && (
-                      <div className="size-8 shrink-0 mt-1 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Sparkles className="size-4 text-primary" />
-                      </div>
-                    )}
-
-                    <div
-                      className={cn(
-                        "max-w-[80%] rounded-lg px-4 py-2.5",
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      )}
-                    >
-                      {message.role === "assistant" ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <Streamdown>{message.content}</Streamdown>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap text-sm">
-                          {message.content}
-                        </p>
-                      )}
-                    </div>
-
-                    {message.role === "user" && (
-                      <div className="size-8 shrink-0 mt-1 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="size-4 text-secondary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {isLoading && (
-                <div
-                  className="flex items-start gap-3"
-                  style={
-                    minHeightForLastMessage > 0
-                      ? { minHeight: `${minHeightForLastMessage}px` }
-                      : undefined
-                  }
-                >
-                  <div className="size-8 shrink-0 mt-1 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="size-4 text-primary" />
-                  </div>
-                  <div className="rounded-lg bg-muted px-4 py-2.5">
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        )}
+          <span className="text-[10px] font-black text-white italic uppercase tracking-[0.2em]">Navi // AI Sync</span>
+        </div>
+        <div className="flex gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-800" />
+          <div className="w-1.5 h-1.5 rounded-full bg-cyan-500/30" />
+        </div>
       </div>
 
-      {/* Input Area */}
-      <form
-        ref={inputAreaRef}
-        onSubmit={handleSubmit}
-        className="flex gap-2 p-4 border-t bg-background/50 items-end"
-      >
-        <Textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="flex-1 max-h-32 resize-none min-h-9"
-          rows={1}
-        />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={!input.trim() || isLoading}
-          className="shrink-0 h-[38px] w-[38px]"
-        >
-          {isLoading ? (
-            <Loader2 className="size-4 animate-spin" />
+      {/* 2. Messages Terminal */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-5">
+        <div className="space-y-6">
+          {displayMessages.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center opacity-20 text-center px-8">
+              <Terminal className="w-10 h-10 mb-4 text-slate-500" />
+              <p className="text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                {emptyStateMessage}<br />
+                Awaiting initial input segment...
+              </p>
+            </div>
           ) : (
-            <Send className="size-4" />
+            displayMessages.map((message, index) => (
+              <motion.div
+                key={index}
+                initial={{ x: message.role === "user" ? 10 : -10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                className={cn(
+                  "flex flex-col gap-2",
+                  message.role === "user" ? "items-end" : "items-start"
+                )}
+              >
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-[7px] font-black text-slate-600 uppercase tracking-tighter">
+                    {message.role === "user" ? "Protocol // Rider" : "Protocol // Navi"}
+                  </span>
+                </div>
+                
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-2xl p-4 text-[11px] leading-relaxed font-medium shadow-lg border",
+                    message.role === "user"
+                      ? "bg-cyan-600/10 border-cyan-500/30 text-cyan-50 text-right italic"
+                      : "bg-slate-900 border-white/5 text-slate-300"
+                  )}
+                >
+                  {message.role === "assistant" ? (
+                    <div className="prose prose-xs prose-invert max-w-none">
+                      <Streamdown>{message.content}</Streamdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  )}
+                </div>
+              </motion.div>
+            ))
           )}
-        </Button>
+
+          {isLoading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
+              <div className="bg-slate-900 border border-white/5 rounded-xl p-3 flex gap-2 items-center">
+                <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Syncing Response...</span>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* 3. Terminal Input Area */}
+      <form
+        onSubmit={handleSubmit}
+        className="p-5 border-t border-white/5 bg-slate-950/50 flex gap-3 items-end"
+      >
+        <div className="flex-1 relative">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSubmit(e))}
+            placeholder={placeholder}
+            className="w-full bg-slate-950 border-2 border-white/5 focus:border-cyan-500/40 rounded-xl px-4 py-3 text-[10px] font-black text-white placeholder:text-slate-700 resize-none min-h-[50px] transition-all outline-none italic tracking-widest"
+            rows={1}
+          />
+          <div className="absolute right-3 bottom-3 opacity-20 pointer-events-none">
+            <span className="text-[7px] font-black text-cyan-400">TX // SEND</span>
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={!input.trim() || isLoading}
+          className="h-[50px] w-14 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center shadow-lg shadow-cyan-900/20"
+        >
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Send className="w-4 h-4 text-white" />}
+        </button>
       </form>
+
+      {/* Scanning lines for atmosphere */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[size:100%_4px] bg-[linear-gradient(to_bottom,transparent_50%,#000_50%)]" />
     </div>
   );
 }
