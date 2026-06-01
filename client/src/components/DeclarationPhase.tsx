@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import GameButton from "./ui/GameButton";
 
 type SpecType = "horsepower" | "fuelEfficiency" | "seatHeight" | "totalLength" | "weight" | "price" | "year";
 type DirectionType = "up" | "down";
@@ -61,347 +62,196 @@ export default function DeclarationPhase({
   const selectedSpecLabel =
     SPEC_OPTIONS.find((s) => s.value === selectedSpec)?.label || "馬力";
 
-  const getSpecValue = (bike: any, spec: SpecType): string | number => {
-    return bike[spec] ?? "-";
-  };
-
   return (
     <>
-      {/* ===== メインオーバーレイ ===== */}
-      <div className="fixed inset-0 flex flex-col items-center justify-center z-50 p-3 sm:p-5" style={{ background: "rgba(2,6,23,0.25)" }}>
-        <Card
-          className="w-full max-w-xl flex flex-col gap-4 bg-slate-900/95 border-cyan-500/30 p-5 sm:p-6 shadow-2xl backdrop-blur-xl rounded-2xl overflow-y-auto"
-          style={{ maxHeight: "92dvh" }}
+      {/* ===== Main Stage Overlay ===== */}
+      <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-sm overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="w-full max-w-sm flex flex-col gap-4 bg-slate-900/95 border-2 border-cyan-500/30 p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-3xl relative z-10 overflow-y-auto no-scrollbar"
+          style={{ maxHeight: "100%" }}
         >
-          {/* ヘッダー */}
-          <div className="text-center flex-shrink-0 border-b border-white/10 pb-3">
-            <h2
-              className="text-xl sm:text-2xl font-black text-white tracking-wider"
-              style={{ textShadow: "0 0 20px rgba(34,211,238,0.4)" }}
-            >
-              宣言フェーズ
+          {/* Header */}
+          <div className="text-center flex-shrink-0 border-b border-white/10 pb-4">
+            <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase leading-none">
+              Declaration
             </h2>
-            <p className="text-[10px] sm:text-xs font-bold text-cyan-400 mt-0.5">{playerName}の宣言</p>
+            <p className="text-[9px] font-black text-cyan-400 mt-1 uppercase tracking-widest">{playerName}'S CHOICE</p>
           </div>
 
-          {/* 手札アイコン列 */}
+          {/* Hand List */}
           {hand.length > 0 && (
-            <div className="flex-shrink-0 bg-slate-950/40 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] font-bold text-white/40 text-center mb-2 tracking-widest uppercase">
-                あなたの手札（{hand.length}枚）— タップで詳細確認
+            <div className="flex-shrink-0 bg-slate-950/40 p-3 rounded-2xl border border-white/5 overflow-hidden">
+              <p className="text-[8px] font-black text-slate-500 text-center mb-3 tracking-widest uppercase">
+                YOUR HAND ({hand.length})
               </p>
-              <div className="flex justify-center gap-2 sm:gap-3 flex-wrap">
+              <div className="flex justify-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {hand.map((bike: any) => (
-                  <button
+                  <motion.button
                     key={bike.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setExpandedBike(bike)}
-                    className="group relative flex flex-col items-center gap-1 focus:outline-none"
-                    style={{ WebkitTapHighlightColor: "transparent" }}
+                    className="flex-shrink-0 flex flex-col items-center gap-1.5 focus:outline-none"
                   >
-                    {/* アイコン画像 */}
-                    <div
-                      className="relative overflow-hidden rounded-xl border border-white/10 group-hover:border-cyan-400/70 transition-all duration-300"
-                      style={{
-                        width: "80px",
-                        height: "80px",
-                        background: "linear-gradient(135deg, rgba(34,211,238,0.08), rgba(236,72,153,0.08))",
-                        boxShadow: "0 0 0 0 rgba(34,211,238,0)",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.boxShadow =
-                          "0 0 12px rgba(34,211,238,0.25)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.boxShadow =
-                          "0 0 0 0 rgba(34,211,238,0)";
-                      }}
-                    >
+                    <div className="w-16 h-16 rounded-xl border border-white/10 bg-slate-900/80 overflow-hidden shadow-lg relative">
                       {bike.photoUrl ? (
-                        <img
-                          src={bike.photoUrl}
-                          alt={bike.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "https://placehold.co/80x80/1e293b/64748b?text=?";
-                          }}
-                        />
+                        <img src={bike.photoUrl} alt={bike.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-600 text-[10px]">
-                          NO IMG
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-700">BIKE</div>
                       )}
-                      {/* グロー演出 */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl"
-                        style={{ background: "linear-gradient(135deg, rgba(34,211,238,0.12), transparent)" }}
-                      />
                     </div>
-                    {/* バイク名 */}
-                    <span
-                      className="text-[9px] font-bold text-white/60 group-hover:text-cyan-300 transition-colors duration-200 text-center leading-tight truncate"
-                      style={{ maxWidth: "80px" }}
-                    >
-                      {bike.name}
-                    </span>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* 宣言フォーム */}
-          <div className="flex-shrink-0 space-y-4">
+          {/* Form */}
+          <div className="space-y-5 py-2">
             {hasBan && (
-              <div className="px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-                <p className="text-xs font-bold text-amber-400 leading-relaxed">
-                  ⚠️ 前回「
-                  {SPEC_OPTIONS.find((s) => s.value === prevDeclaredSpec)?.label ?? prevDeclaredSpec}
-                  {prevDeclaredDirection === "up" ? " ↑大きい" : " ↓小さい"}」は選択不可
+              <div className="px-4 py-2 bg-pink-500/10 border border-pink-500/30 rounded-xl">
+                <p className="text-[10px] font-black text-pink-400 uppercase tracking-tighter leading-tight text-center">
+                  LOCKOUT: {SPEC_OPTIONS.find((s) => s.value === prevDeclaredSpec)?.label} {prevDeclaredDirection === "up" ? "UP" : "DOWN"} BANNED
                 </p>
               </div>
             )}
 
-            {/* スペック選択 */}
+            {/* Spec Selection */}
             <div className="relative">
-              <label className="block text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">
-                スペックを選択
-              </label>
+              <label className="block text-[9px] font-black text-slate-500 mb-1.5 tracking-widest uppercase">Select Spec</label>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-white flex justify-between items-center hover:border-cyan-500/60 transition-all"
+                className="w-full bg-slate-950/80 border-2 border-slate-800 rounded-2xl px-5 py-3 text-white flex justify-between items-center hover:border-cyan-500/50 transition-all"
               >
-                <span className="font-bold text-sm sm:text-base">{selectedSpecLabel}</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-cyan-400 transition-transform ${showDropdown ? "rotate-180" : ""}`}
-                />
+                <span className="font-black text-sm uppercase italic">{selectedSpecLabel}</span>
+                <ChevronDown className={`w-4 h-4 text-cyan-400 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
               </button>
-              {showDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden z-20 shadow-2xl">
-                  {SPEC_OPTIONS.map((spec) => (
-                    <button
-                      key={spec.value}
-                      onClick={() => {
-                        setSelectedSpec(spec.value);
-                        setShowDropdown(false);
-                      }}
-                      className="w-full px-4 py-2 text-white font-bold border-b border-slate-700/50 hover:bg-cyan-900/30 hover:text-cyan-300 transition-colors last:border-0 text-xs sm:text-sm flex items-center justify-between gap-3"
-                    >
-                      <span className="shrink-0">{spec.label}</span>
-                      <span className="text-xs text-cyan-300 text-right tabular-nums">
-                        {hand.length > 0
-                          ? hand.map((bike) => getSpecValue(bike, spec.value)).join(" / ")
-                          : "-"}
-                        <span className="ml-1 text-slate-400">{spec.unit}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 方向選択 */}
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">
-                方向を選択
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setSelectedDirection("up")}
-                  className={`py-2.5 px-4 rounded-xl font-black text-sm sm:text-base transition-all ${
-                    selectedDirection === "up"
-                      ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-[0_0_12px_rgba(34,211,238,0.35)] scale-[1.01]"
-                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-cyan-500/40"
-                  }`}
-                >
-                  ↑ 大きい
-                </button>
-                <button
-                  onClick={() => setSelectedDirection("down")}
-                  className={`py-2.5 px-4 rounded-xl font-black text-sm sm:text-base transition-all ${
-                    selectedDirection === "down"
-                      ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-[0_0_12px_rgba(236,72,153,0.35)] scale-[1.01]"
-                      : "bg-slate-800/80 text-slate-400 border border-slate-700 hover:border-pink-500/40"
-                  }`}
-                >
-                  ↓ 小さい
-                </button>
-              </div>
-            </div>
-
-            {/* プレビュー */}
-            <div
-              className={`px-4 py-2.5 rounded-xl border transition-colors ${
-                isBanned
-                  ? "bg-red-500/10 border-red-500/30"
-                  : "bg-slate-950/50 border-cyan-500/20"
-              }`}
-            >
-              <p className="text-[9px] font-bold text-slate-500 mb-0.5 uppercase tracking-widest">宣言内容</p>
-              <p className={`text-sm sm:text-base font-black ${isBanned ? "text-red-400" : "text-white"}`}>
-                {selectedSpecLabel} が
-                <span
-                  className={`mx-1 ${
-                    selectedDirection === "up" ? "text-cyan-400" : "text-pink-400"
-                  }`}
-                >
-                  {selectedDirection === "up" ? "大きい" : "小さい"}
-                </span>
-                ほうが勝ち
-                {isBanned && (
-                  <span className="block text-[10px] mt-0.5 text-red-500/80 font-bold">
-                    （この組み合わせは選択不可です）
-                  </span>
+              
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border-2 border-slate-700 rounded-2xl overflow-hidden z-30 shadow-2xl"
+                  >
+                    {SPEC_OPTIONS.map((spec) => (
+                      <button
+                        key={spec.value}
+                        onClick={() => { setSelectedSpec(spec.value); setShowDropdown(false); }}
+                        className="w-full px-5 py-3 text-white font-bold border-b border-slate-700 last:border-0 hover:bg-cyan-600 transition-colors text-xs flex items-center justify-between"
+                      >
+                        <span className="uppercase italic">{spec.label}</span>
+                        <span className="text-[10px] text-cyan-300 font-mono">
+                          {spec.unit}
+                        </span>
+                      </button>
+                    ))}
+                  </motion.div>
                 )}
+              </AnimatePresence>
+            </div>
+
+            {/* Direction Selection */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setSelectedDirection("up")}
+                className={`py-3 rounded-2xl font-black text-xs uppercase italic transition-all border-2 ${
+                  selectedDirection === "up"
+                    ? "bg-cyan-600 border-cyan-400 text-white shadow-lg shadow-cyan-900/30"
+                    : "bg-slate-950/50 border-slate-800 text-slate-600 hover:border-slate-700"
+                }`}
+              >
+                High / Up
+              </button>
+              <button
+                onClick={() => setSelectedDirection("down")}
+                className={`py-3 rounded-2xl font-black text-xs uppercase italic transition-all border-2 ${
+                  selectedDirection === "down"
+                    ? "bg-pink-600 border-pink-400 text-white shadow-lg shadow-pink-900/30"
+                    : "bg-slate-950/50 border-slate-800 text-slate-600 hover:border-slate-700"
+                }`}
+              >
+                Low / Down
+              </button>
+            </div>
+
+            {/* Result Preview */}
+            <div className="bg-slate-950/80 border-2 border-white/5 rounded-2xl p-4 text-center">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Rule Strategy</p>
+              <p className={`text-base font-black italic uppercase leading-none ${isBanned ? "text-pink-500" : "text-white"}`}>
+                {selectedSpecLabel} 
+                <span className={`mx-2 text-xl ${selectedDirection === "up" ? "text-cyan-400" : "text-pink-400"}`}>
+                  {selectedDirection === "up" ? "↑" : "↓"}
+                </span>
+                {selectedDirection === "up" ? "HIGHER" : "LOWER"} Wins
               </p>
             </div>
 
-            {/* 宣言ボタン */}
-            <Button
+            {/* Action */}
+            <GameButton
               onClick={handleDeclare}
               disabled={isLoading || isBanned}
-              className={`w-full font-black text-sm sm:text-base py-4 rounded-xl shadow-lg transition-all ${
-                isBanned
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                  : "bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500 text-white hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(34,211,238,0.4)] border-none"
-              }`}
+              variant={isBanned ? "secondary" : "primary"}
+              className="w-full py-4 text-sm"
             >
-              {isLoading ? "宣言中..." : isBanned ? "宣言不可" : "この内容で宣言する"}
-            </Button>
+              {isLoading ? "SYNCING..." : isBanned ? "RULE BANNED" : "CONFIRM DECLARE"}
+            </GameButton>
           </div>
-        </Card>
+        </motion.div>
       </div>
 
-      {/* ===== バイク詳細オーバーレイ（タップで展開） ===== */}
-      {expandedBike && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-          style={{ background: "rgba(2,6,23,0.85)", backdropFilter: "blur(8px)" }}
-          onClick={() => setExpandedBike(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-cyan-500/40 overflow-hidden shadow-[0_0_60px_rgba(34,211,238,0.2)]"
-            style={{
-              background: "linear-gradient(160deg, #0f172a 0%, #0f2340 50%, #0f172a 100%)",
-              animation: "expandIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 閉じるボタン */}
-            <button
-              onClick={() => setExpandedBike(null)}
-              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/80 border border-white/10 text-slate-400 hover:text-white hover:border-cyan-400 transition-all z-10"
-              style={{ position: "absolute" }}
+      {/* ===== Bike Details Modal (Stage-relative) ===== */}
+      <AnimatePresence>
+        {expandedBike && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-sm rounded-3xl border-2 border-cyan-500/40 overflow-hidden shadow-2xl relative bg-slate-950"
             >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* 写真エリア */}
-            <div className="relative h-44 overflow-hidden">
-              <div
-                className="absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(34,211,238,0.12), rgba(236,72,153,0.08))",
-                }}
-              />
-              {expandedBike.photoUrl ? (
-                <img
-                  src={expandedBike.photoUrl}
-                  alt={expandedBike.name}
-                  className="w-full h-full object-contain"
-                  style={{ animation: "fadeIn 0.3s ease both" }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-600 text-sm">
-                  No Image
-                </div>
-              )}
-              {/* 下グラデーション */}
-              <div
-                className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
-                style={{
-                  background: "linear-gradient(to top, #0f172a, transparent)",
-                }}
-              />
-              {/* バイク名オーバーレイ */}
-              <div className="absolute bottom-2 left-4 right-4">
-                <p className="text-[10px] font-bold text-cyan-400/80 uppercase tracking-widest">
-                  {expandedBike.maker}
-                </p>
-                <h3
-                  className="text-xl font-black text-white leading-tight"
-                  style={{ textShadow: "0 0 20px rgba(34,211,238,0.5)" }}
-                >
-                  {expandedBike.name}
-                </h3>
-              </div>
-            </div>
-
-            {/* スペックグリッド */}
-            <div className="px-4 pb-4 pt-3">
-              <div className="grid grid-cols-2 gap-2">
-                {SPEC_ITEMS.map((spec) => (
-                  <div
-                    key={spec.key}
-                    className="rounded-xl px-3 py-2 border"
-                    style={{
-                      background: "rgba(15,23,42,0.8)",
-                      borderColor: "rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    <p className="text-[10px] font-bold text-slate-500 mb-0.5">{spec.label}</p>
-                    <p className="text-sm font-black text-white leading-none">
-                      {(expandedBike as any)[spec.key] ?? "—"}
-                      <span className="text-[10px] ml-0.5 text-slate-500 font-normal">
-                        {spec.unit}
-                      </span>
-                    </p>
-                  </div>
-                ))}
-                <div
-                  className="rounded-xl px-3 py-2 border"
-                  style={{
-                    background: "rgba(15,23,42,0.8)",
-                    borderColor: "rgba(255,255,255,0.07)",
-                  }}
-                >
-                  <p className="text-[10px] font-bold text-slate-500 mb-0.5">気筒数</p>
-                  <p className="text-sm font-black text-cyan-400">{expandedBike.cylinders}</p>
-                </div>
-                <div
-                  className="rounded-xl px-3 py-2 border"
-                  style={{
-                    background: "rgba(15,23,42,0.8)",
-                    borderColor: "rgba(255,255,255,0.07)",
-                  }}
-                >
-                  <p className="text-[10px] font-bold text-slate-500 mb-0.5">変速機</p>
-                  <p className="text-sm font-black text-pink-400">{expandedBike.transmission}</p>
-                </div>
-              </div>
-
               <button
                 onClick={() => setExpandedBike(null)}
-                className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold text-white/70 hover:text-white border border-white/10 hover:border-cyan-500/50 transition-all"
-                style={{ background: "rgba(15,23,42,0.6)" }}
+                className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-slate-800/80 text-white"
               >
-                閉じる
+                <X className="w-4 h-4" />
               </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      <style>{`
-        @keyframes expandIn {
-          from { opacity: 0; transform: scale(0.85); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-      `}</style>
+              <div className="p-6">
+                <div className="h-40 rounded-2xl bg-slate-900 border border-white/5 mb-6 flex items-center justify-center relative overflow-hidden">
+                  {expandedBike.photoUrl ? (
+                    <img src={expandedBike.photoUrl} alt={expandedBike.name} className="max-w-[85%] max-h-[85%] object-contain" />
+                  ) : (
+                    <span className="text-[10px] font-black text-slate-800">NO DATA</span>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-[9px] font-black text-cyan-500 uppercase tracking-widest">{expandedBike.maker}</p>
+                  <h3 className="text-2xl font-black text-white italic uppercase">{expandedBike.name}</h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-8">
+                  {SPEC_ITEMS.map((spec) => (
+                    <div key={spec.key} className="bg-slate-900/60 border border-white/5 rounded-xl p-2.5">
+                      <p className="text-[8px] text-slate-500 font-black uppercase">{spec.label}</p>
+                      <p className="text-sm font-black text-white italic">
+                        {(expandedBike as any)[spec.key] ?? "-"}
+                        <span className="text-[8px] ml-1 text-slate-600 not-italic uppercase">{spec.unit}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <GameButton onClick={() => setExpandedBike(null)} variant="secondary" className="w-full py-4">CLOSE DATA</GameButton>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
