@@ -1,117 +1,135 @@
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ChevronRight, Activity, Terminal, Database, Sparkles } from "lucide-react";
 import BikeCard from "./BikeCard";
+import GameButton from "./ui/GameButton";
 
 interface HandReviewProps {
   hand: any[];
   playerNumber: number;
-  onConfirm: () => void;
+  onComplete: () => void;
 }
 
 const SPEC_ITEMS = [
-  { key: "horsepower", label: "馬力", unit: "PS" },
-  { key: "fuelEfficiency", label: "燃費", unit: "km/L" },
-  { key: "seatHeight", label: "シート高", unit: "mm" },
-  { key: "totalLength", label: "全長", unit: "mm" },
-  { key: "weight", label: "重量", unit: "kg" },
-  { key: "price", label: "価格", unit: "万円" },
-  { key: "year", label: "発売年月日", unit: "年" },
+  { key: "horsepower", label: "HP", unit: "PS" },
+  { key: "fuelEfficiency", label: "FE", unit: "km/L" },
+  { key: "price", label: "PRC", unit: "万円" },
+  { key: "weight", label: "WGT", unit: "kg" },
 ];
 
 /**
- * Hand Review Screen - Display dealt cards before declaration
+ * HandReview - Tactical Briefing Screen.
+ * Logical design: Strategic Stillness. Calm before the storm.
  */
-export default function HandReview({ hand, playerNumber, onConfirm }: HandReviewProps) {
-  const [selectedBikeId, setSelectedBikeId] = useState<number | null>(null);
+export default function HandReview({ hand, onComplete }: HandReviewProps) {
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [isConfirming, setIsConfirming] = useState(false);
+  const selectedBike = hand[selectedIdx];
 
   const handleConfirm = () => {
     if (isConfirming) return;
     setIsConfirming(true);
-    onConfirm();
+    onComplete();
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4 py-8">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          プレイヤー {playerNumber} の手札
-        </h1>
-        <p className="text-slate-400">配られたバイクを確認してください</p>
+    <div className="absolute inset-0 z-40 flex flex-col p-6 bg-[#020617] font-mono select-none overflow-hidden">
+      
+      {/* 1. Briefing Header */}
+      <div className="shrink-0 mb-8 flex justify-between items-end border-b border-white/5 pb-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
+            <span className="text-[10px] font-black text-cyan-400 tracking-[0.3em] uppercase">Tactical Briefing</span>
+          </div>
+          <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter italic">Analyzing <span className="text-slate-500">Hand</span></h1>
+        </div>
+        <div className="text-right">
+          <p className="text-[8px] text-slate-600 font-black uppercase tracking-widest">Total Assets</p>
+          <p className="text-lg font-black text-white italic leading-none">{hand.length}</p>
+        </div>
       </div>
 
-      {/* Hand Display */}
-      <div className="w-full max-w-2xl bg-slate-800/50 border border-cyan-500/30 rounded-lg p-6 mb-8">
-        <p className="text-xs text-slate-400 mb-3">（← 横スクロールで確認できます →）</p>
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-4 pb-4 snap-x snap-mandatory -mx-1 px-1 mb-6" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {hand.map((bike) => (
-            <div key={bike.id} className="snap-start flex-shrink-0">
-              <BikeCard
-                bike={bike}
-                isSelected={selectedBikeId === bike.id}
-                onClick={() => setSelectedBikeId(bike.id)}
-                size="medium"
+      <div className="flex-1 flex flex-col min-h-0 gap-6">
+        
+        {/* 2. Main Inspection Area (The Focused Bike) */}
+        <div className="flex-1 flex flex-col items-center justify-center relative">
+          {/* Diagnostic Grid Background */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,rgba(34,211,238,0.2)_0%,transparent_70%)] pointer-events-none" />
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selectedBike.id}
+              initial={{ scale: 0.9, opacity: 0, x: 20 }}
+              animate={{ scale: 1, opacity: 1, x: 0 }}
+              exit={{ scale: 1.1, opacity: 0, x: -20 }}
+              className="relative"
+            >
+              {/* Scanline overlay for focus */}
+              <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-2xl opacity-20">
+                <div className="w-full h-full bg-[linear-gradient(transparent_50%,#000_50%)] bg-[size:100%_4px] animate-scan" />
+              </div>
+              <BikeCard bike={selectedBike} size="medium" isPokerRatio={true} />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Asset Selection Dots */}
+          <div className="mt-6 flex gap-1.5 overflow-x-auto no-scrollbar max-w-full px-4">
+            {hand.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelectedIdx(idx)}
+                className={`flex-shrink-0 w-8 h-1 rounded-full transition-all ${selectedIdx === idx ? 'bg-cyan-500 shadow-[0_0_8px_cyan]' : 'bg-slate-800'}`}
               />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Selected Bike Details */}
-        {selectedBikeId && (
-          <div className="bg-slate-900/50 border border-slate-600 rounded-lg p-4">
-            {(() => {
-              const bike = hand.find((b) => b.id === selectedBikeId);
-              return (
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-400">バイク名</p>
-                    <p className="text-lg font-bold text-white">{bike.name}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-slate-400">メーカー</p>
-                      <p className="text-white font-semibold">{bike.maker}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">カテゴリ</p>
-                      <p className="text-white font-semibold">{bike.category}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {SPEC_ITEMS.map((spec) => (
-                      <div key={spec.key}>
-                        <p className="text-xs text-slate-400">{spec.label}</p>
-                        <p className="text-white font-semibold">{bike[spec.key] ?? "-"}{spec.unit}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-slate-400">気筒数</p>
-                      <p className="text-white font-semibold">{bike.cylinders}気筒</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400">トランスミッション</p>
-                      <p className="text-white font-semibold">{bike.transmission}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+        {/* 3. Asset Intelligence Panel (Details) */}
+        <div className="shrink-0 bg-slate-900/60 border-2 border-white/5 rounded-3xl p-5 backdrop-blur-md relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-cyan-500/40" />
+          <div className="mb-4 flex justify-between items-start">
+            <div>
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Asset Model</p>
+              <h3 className="text-base font-black text-white uppercase italic leading-none">{selectedBike.name}</h3>
+            </div>
+            <div className="text-right">
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
+              <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[8px] font-black border border-green-500/20 uppercase tracking-tighter">Synchronized</span>
+            </div>
           </div>
-        )}
+
+          <div className="grid grid-cols-2 gap-3 mb-1">
+            {SPEC_ITEMS.map(spec => (
+              <div key={spec.key} className="bg-slate-950/40 p-2.5 rounded-xl border border-white/5 flex justify-between items-center">
+                <span className="text-[8px] font-black text-slate-600 uppercase">{spec.label}</span>
+                <p className="text-xs font-black text-slate-300 italic">
+                  {selectedBike[spec.key] ?? "--"}
+                  <span className="text-[7px] ml-0.5 text-slate-600 not-italic">{spec.unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Confirm Button */}
-      <Button
-        onClick={handleConfirm}
-        disabled={isConfirming}
-        className="w-full max-w-sm h-12 text-base font-bold bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-600 hover:to-pink-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
-      >
-        {isConfirming ? "処理中..." : "確認完了"}
-      </Button>
+      {/* 4. Action Area */}
+      <div className="shrink-0 pt-8 pb-4">
+        <GameButton
+          onClick={handleConfirm}
+          disabled={isConfirming}
+          className="w-full py-5 text-sm"
+        >
+          {isConfirming ? "TRANSMITTING..." : "FINALIZE BRIEFING"}
+        </GameButton>
+        <p className="text-[8px] text-slate-600 font-bold uppercase text-center mt-4 tracking-widest opacity-40">
+          Confirm hand assets to begin synchronization protocol.
+        </p>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes scan { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+      `}} />
     </div>
   );
 }
