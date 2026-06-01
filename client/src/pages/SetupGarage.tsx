@@ -4,19 +4,20 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Sparkles, Loader2, Warehouse, Image, Check, Star } from "lucide-react";
+import { ChevronLeft, Sparkles, Loader2, Warehouse, Check, Zap, Cpu, Settings, Activity } from "lucide-react";
+import GameButton from "@/components/ui/GameButton";
 
 type SetupMode = "menu" | "select" | "register";
 
 export default function SetupGarage() {
-  const { isLoaded: isAuthLoaded, isAuthenticated, user } = useAuth();
+  const { isLoaded: isAuthLoaded, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
 
   const [mode, setMode] = useState<SetupMode>("menu");
   const [selectedCategory, setSelectedCategory] = useState<"all" | "large" | "medium" | "small">("all");
 
-  // Registration Form States
+  // Form States
   const [name, setName] = useState("");
   const [maker, setMaker] = useState("");
   const [category, setCategory] = useState<"large" | "medium" | "small">("medium");
@@ -35,537 +36,193 @@ export default function SetupGarage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const bikesQuery = trpc.bike.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-
+  const bikesQuery = trpc.bike.list.useQuery(undefined, { enabled: isAuthenticated });
   const setGarageBikeMutation = trpc.garage.setGarageBike.useMutation();
   const registerGarageBikeMutation = trpc.garage.registerGarageBike.useMutation();
 
-  // Redirect to top if not logged in
   useEffect(() => {
-    if (isAuthLoaded && !isAuthenticated) {
-      setLocation("/");
-    }
+    if (isAuthLoaded && !isAuthenticated) setLocation("/");
   }, [isAuthLoaded, isAuthenticated]);
 
   if (!isAuthLoaded || !isAuthenticated) {
-    return (
-      <div className="h-full w-full bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-      </div>
-    );
+    return <div className="h-full w-full bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
   }
 
   const handleChooseBike = async (bikeId: number) => {
     try {
       setIsSubmitting(true);
       const res = await setGarageBikeMutation.mutateAsync({ bikeId });
-      if (res.success) {
-        // Refetch garage query to sync state
-        await utils.garage.getGarage.refetch();
-        setLocation("/");
-      }
-    } catch (err) {
-      console.error("Failed to select bike:", err);
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (res.success) { await utils.garage.getGarage.refetch(); setLocation("/"); }
+    } catch (err) { console.error(err); } finally { setIsSubmitting(false); }
   };
 
   const handleRegisterBike = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !name || !maker || !horsepower || !fuelEfficiency || !weight ||
-      !seatHeight || !totalLength || !year || !price || !displacement
-    ) {
-      setErrorMsg("すべての必須スペック項目を精緻に入力してください。");
-      return;
+    if (!name || !maker || !horsepower || !fuelEfficiency || !weight || !seatHeight || !totalLength || !year || !price || !displacement) {
+      setErrorMsg("Missing critical spec data."); return;
     }
-
     setIsSubmitting(true);
-    setErrorMsg("");
-
-    // Setup pictogram fallback path
-    const fallbackPhotoUrl = `/pictogram_${bikeStyle}.png`;
-
     try {
       const res = await registerGarageBikeMutation.mutateAsync({
-        name,
-        maker,
-        category,
-        cylinders,
-        transmission,
-        horsepower: Number(horsepower),
-        fuelEfficiency: Number(fuelEfficiency),
-        weight: Number(weight),
-        seatHeight: Number(seatHeight),
-        totalLength: Number(totalLength),
-        year: Number(year),
-        price: Number(price),
-        photoUrl: fallbackPhotoUrl,
-        displacement: String(displacement),
-        displacementUnit: "cc",
-        engineType,
+        name, maker, category, cylinders, transmission, horsepower: Number(horsepower), fuelEfficiency: Number(fuelEfficiency),
+        weight: Number(weight), seatHeight: Number(seatHeight), totalLength: Number(totalLength), year: Number(year), price: Number(price),
+        photoUrl: `/pictogram_${bikeStyle}.png`, displacement: String(displacement), displacementUnit: "cc", engineType,
       });
-
-      if (res.success) {
-        await utils.garage.getGarage.refetch();
-        await utils.bike.list.refetch();
-        setLocation("/");
-      }
-    } catch (err: any) {
-      console.error("Failed to register bike:", err);
-      setErrorMsg(err.message || "バイクの登録に失敗しました。入力値を確認してください。");
-    } finally {
-      setIsSubmitting(false);
-    }
+      if (res.success) { await utils.garage.getGarage.refetch(); await utils.bike.list.refetch(); setLocation("/"); }
+    } catch (err: any) { setErrorMsg(err.message || "Sync Error"); } finally { setIsSubmitting(false); }
   };
 
-  const filteredBikes = bikesQuery.data?.filter((b: any) => {
-    if (selectedCategory === "all") return true;
-    return b.category === selectedCategory;
-  }) || [];
+  const filteredBikes = bikesQuery.data?.filter((b: any) => selectedCategory === "all" || b.category === selectedCategory) || [];
 
   return (
-    <div className="h-full w-full bg-slate-950 text-slate-100 relative overflow-hidden flex flex-col font-sans">
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none" />
-
-      {/* Cyberpunk Scanline */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px] pointer-events-none z-40 opacity-20" />
-
-      {/* Header */}
-      <div className="z-30 shrink-0 bg-slate-900/90 backdrop-blur-md border-b border-cyan-500/20 px-4 py-3 flex items-center justify-between">
+    <div className="h-full w-full bg-[#020617] text-slate-100 relative overflow-hidden flex flex-col font-mono">
+      {/* 1. Header (Lab HUD) */}
+      <div className="z-30 shrink-0 bg-slate-950/80 backdrop-blur-md border-b border-white/5 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {mode !== "menu" && (
-            <Button
-              onClick={() => {
-                setMode("menu");
-                setErrorMsg("");
-              }}
-              variant="ghost"
-              size="icon"
-              className="text-slate-400 hover:text-white"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-          )}
-          <div>
-            <h1 className="text-sm font-black text-white italic tracking-wider uppercase leading-none mb-1">GARAGE SETUP</h1>
-            <p className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest leading-none">
-              {mode === "menu" ? "Mode Select" : mode === "select" ? "Choose from List" : "Register Specs"}
+          <button onClick={() => mode === "menu" ? setLocation("/my-garage") : setMode("menu")} className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/50 transition-all">
+            <ChevronLeft className="w-4 h-4 text-cyan-400" />
+          </button>
+          <div className="flex flex-col">
+            <h1 className="text-[10px] font-black text-white italic tracking-[0.2em] uppercase leading-none mb-1">Module // Tuning</h1>
+            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest leading-none">
+              {mode === "menu" ? "Mode Selection" : mode === "select" ? "Asset Archive" : "Manual Calibrating"}
             </p>
           </div>
         </div>
+        <Settings className="w-4 h-4 text-slate-700 animate-spin-slow" />
       </div>
 
       <div className="flex-1 flex flex-col relative z-10 min-h-0">
         <AnimatePresence mode="wait">
-          {/* ==================== 1. MODE SELECT MENU ==================== */}
+          
+          {/* --- Mode Select --- */}
           {mode === "menu" && (
-            <motion.div
-              key="menu"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="w-full h-full flex flex-col justify-center px-6 space-y-4 text-center"
-            >
-              <div className="mb-6">
-                <div className="w-16 h-16 rounded-full border border-cyan-500/30 bg-slate-900 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
-                  <Warehouse className="w-8 h-8 text-cyan-400 animate-pulse" />
+            <motion.div key="menu" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="h-full flex flex-col justify-center px-6 space-y-6 text-center">
+              <div className="mb-4">
+                <div className="w-20 h-20 rounded-[2rem] bg-slate-900 border-2 border-cyan-500/20 flex items-center justify-center mx-auto mb-6 shadow-cyan-900/20 shadow-2xl">
+                  <Cpu className="w-10 h-10 text-cyan-400 animate-pulse" />
                 </div>
-                <h2 className="text-xl font-black text-white italic uppercase tracking-wider">愛車を設定しましょう</h2>
-                <p className="text-[11px] text-slate-500 mt-2 leading-relaxed font-bold uppercase">
-                  ガレージに展示するあなたのバイクを設定します。<br />
-                  新規登録されたバイクはデッキにも加わります。
-                </p>
+                <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Machine Link Initiation</h2>
+                <p className="text-[9px] text-slate-500 mt-2 font-bold uppercase tracking-widest leading-relaxed">Select synchronization method to <br/>establish primary asset link.</p>
               </div>
 
-              {/* Option A: Select Existing */}
-              <button
-                onClick={() => setMode("select")}
-                className="w-full bg-slate-900/90 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-800/80 rounded-2xl p-5 text-left transition-all group flex items-start gap-4 shadow-lg"
-              >
-                <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-800 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform text-cyan-400">
-                  <Warehouse className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-wider uppercase italic leading-none">既存データから探す</h3>
-                  <p className="text-[9px] text-slate-500 mt-1.5 leading-relaxed font-bold uppercase">
-                    マスタデータから自分のバイクを検索して紐付けます。
-                  </p>
-                </div>
-              </button>
-
-              {/* Option B: Register Brand New */}
-              <button
-                onClick={() => setMode("register")}
-                className="w-full bg-slate-900/90 border border-slate-800 hover:border-pink-500/50 hover:bg-slate-800/80 rounded-2xl p-5 text-left transition-all group flex items-start gap-4 shadow-lg"
-              >
-                <div className="w-10 h-10 rounded-xl bg-pink-950 border border-pink-800 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform text-pink-400">
-                  <Sparkles className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-wider uppercase italic leading-none">新規スペック登録</h3>
-                  <p className="text-[9px] text-slate-500 mt-1.5 leading-relaxed font-bold uppercase">
-                    マスタにない場合、すべての情報を入力して新規登録します。
-                  </p>
-                </div>
-              </button>
+              <div className="grid gap-4">
+                <button onClick={() => setMode("select")} className="w-full bg-slate-900/60 border-2 border-white/5 hover:border-cyan-500/40 rounded-3xl p-6 text-left transition-all group flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-950 border border-cyan-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform text-cyan-400"><Warehouse className="w-6 h-6" /></div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-white italic uppercase leading-none">Asset Database</h3>
+                    <p className="text-[8px] text-slate-500 mt-2 uppercase font-bold tracking-tighter">Query existing machine records from central archive.</p>
+                  </div>
+                </button>
+                <button onClick={() => setMode("register")} className="w-full bg-slate-900/60 border-2 border-white/5 hover:border-pink-500/40 rounded-3xl p-6 text-left transition-all group flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-pink-950 border border-pink-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform text-pink-400"><Zap className="w-6 h-6" /></div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-white italic uppercase leading-none">Manual Override</h3>
+                    <p className="text-[8px] text-slate-500 mt-2 uppercase font-bold tracking-tighter">Enter raw performance specs for non-indexed assets.</p>
+                  </div>
+                </button>
+              </div>
             </motion.div>
           )}
 
-          {/* ==================== 2. CHOOSE FROM LIST ==================== */}
+          {/* --- Asset Select --- */}
           {mode === "select" && (
-            <motion.div
-              key="select"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="w-full h-full flex flex-col overflow-hidden"
-            >
-              {/* Category Filter Tabs */}
-              <div className="shrink-0 px-5 py-3 border-b border-slate-800/80 bg-slate-950/40 flex gap-1.5 overflow-x-auto no-scrollbar">
-                {(["all", "large", "medium", "small"] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`text-[9px] font-bold px-3 py-1.5 rounded-lg border transition-all uppercase whitespace-nowrap ${
-                      selectedCategory === cat
-                        ? "bg-cyan-500/10 border-cyan-500 text-cyan-400"
-                        : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {cat === "all" ? "すべて" : cat === "large" ? "大型" : cat === "medium" ? "中型" : "小型"}
+            <motion.div key="select" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full flex flex-col overflow-hidden">
+              <div className="shrink-0 px-4 py-3 bg-slate-950/40 flex gap-2 overflow-x-auto no-scrollbar border-b border-white/5">
+                {(["all", "large", "medium", "small"] as const).map(cat => (
+                  <button key={cat} onClick={() => setSelectedCategory(cat)} className={`px-4 py-2 rounded-xl border-2 text-[9px] font-black uppercase tracking-widest transition-all ${selectedCategory === cat ? 'bg-cyan-600/20 border-cyan-400 text-cyan-100 shadow-lg' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
+                    {cat}
                   </button>
                 ))}
               </div>
-
-              {/* Bike List */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-slate-950/20 no-scrollbar">
-                {bikesQuery.isLoading ? (
-                  <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-                    <p className="text-[10px] text-slate-500 font-bold tracking-widest animate-pulse uppercase">SYNCING DATA...</p>
-                  </div>
-                ) : filteredBikes.length > 0 ? (
-                  filteredBikes.map((bike: any) => (
-                    <div
-                      key={bike.id}
-                      onClick={() => !isSubmitting && handleChooseBike(bike.id)}
-                      className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-800/80 bg-slate-900/60 hover:bg-slate-800/80 hover:border-cyan-500/30 cursor-pointer transition-all active:scale-[0.98]"
-                    >
-                      {/* Thumbnail */}
-                      <div className="w-10 h-10 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {bike.photoUrl ? (
-                          <img src={bike.photoUrl} alt={bike.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-lg">🏍</span>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className={`text-[6px] font-black px-1 py-0.5 rounded leading-none ${
-                            bike.category === 'large' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' :
-                            bike.category === 'medium' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/20' :
-                            'bg-pink-500/20 text-pink-400 border border-pink-500/20'
-                          }`}>{bike.category === 'large' ? '大型' : bike.category === 'medium' ? '中型' : '小型'}</span>
-                          <span className="text-[7px] font-bold text-slate-500 uppercase">{bike.maker}</span>
-                        </div>
-                        <p className="text-[11px] font-bold text-white truncate leading-tight uppercase italic">{bike.name}</p>
-                      </div>
-
-                      <div className="text-cyan-400">
-                        <Check className="w-4 h-4 opacity-0 group-hover:opacity-100" />
-                      </div>
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 bg-slate-950/20">
+                {filteredBikes.map((bike: any) => (
+                  <motion.div key={bike.id} whileTap={{ scale: 0.98 }} onClick={() => handleChooseBike(bike.id)} className="flex items-center gap-4 p-4 rounded-2xl border-2 border-white/5 bg-slate-900/60 hover:bg-slate-800/80 hover:border-cyan-500/30 transition-all cursor-pointer">
+                    <div className="w-12 h-12 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-center overflow-hidden"><img src={bike.photoUrl || ""} className="w-full h-full object-cover" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black text-white italic uppercase truncate">{bike.name}</p>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">{bike.maker} // {bike.horsepower}PS</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-16 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                    No data found
-                  </div>
-                )}
+                    <Check className="w-4 h-4 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
           )}
 
-          {/* ==================== 3. REGISTER NEW BIKE ==================== */}
+          {/* --- Manual Register (Tuning) --- */}
           {mode === "register" && (
-            <motion.div
-              key="register"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="w-full h-full flex flex-col overflow-hidden"
-            >
-              <form onSubmit={handleRegisterBike} className="flex flex-col h-full overflow-hidden">
-                {/* Form Container */}
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 bg-slate-950/20 text-xs no-scrollbar">
-                  {/* Form fields here, same as before but styled for stage */}
-                  {/* ... (Omitted fields for brevity in this replace call, will keep existing logic inside) ... */}
-                  {/* Actually, need to provide full content for write_file/replace usually, but since I'm refactoring the whole structure, I'll be careful. */}
-                  
-                  {errorMsg && (
-                    <div className="p-3 bg-pink-950/30 border border-pink-500/20 text-pink-400 rounded-lg text-center font-medium">
-                      {errorMsg}
-                    </div>
-                  )}
+            <motion.div key="register" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full flex flex-col overflow-hidden">
+              <form onSubmit={handleRegisterBike} className="h-full flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8 bg-slate-950/20">
+                  {errorMsg && <div className="p-4 bg-pink-950/30 border-2 border-pink-500/20 text-pink-400 rounded-2xl text-[10px] font-black uppercase text-center">{errorMsg}</div>}
 
-                  {/* Group: Core Identity */}
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-slate-800/80 pb-1.5">基本情報</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">メーカー名 <span className="text-pink-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="YAMAHA, HONDA など"
-                          value={maker}
-                          onChange={(e) => setMaker(e.target.value)}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-medium"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">バイク車種名 <span className="text-pink-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="YZF-R7 など"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-medium"
-                        />
-                      </div>
+                  {/* Tuning Section: Core */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                      <Activity className="w-3 h-3 text-cyan-500" />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Asset Identification</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">年式 <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="2022"
-                          value={year}
-                          onChange={(e) => setYear(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black text-slate-500 uppercase">Maker // ID</label>
+                        <input type="text" required placeholder="MAKER" value={maker} onChange={(e) => setMaker(e.target.value.toUpperCase())} className="w-full h-12 px-4 rounded-xl bg-slate-950 border-2 border-white/5 text-white text-[10px] font-black focus:border-cyan-500/50 outline-none" />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">排気量区分 <span className="text-pink-500">*</span></label>
-                        <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value as any)}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-medium"
-                        >
-                          <option value="large">大型 (400cc超)</option>
-                          <option value="medium">中型 (126cc〜400cc)</option>
-                          <option value="small">小型 (125cc以下)</option>
-                        </select>
+                      <div className="space-y-1">
+                        <label className="text-[8px] font-black text-slate-500 uppercase">Model // Name</label>
+                        <input type="text" required placeholder="MODEL" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} className="w-full h-12 px-4 rounded-xl bg-slate-950 border-2 border-white/5 text-white text-[10px] font-black focus:border-cyan-500/50 outline-none" />
                       </div>
                     </div>
                   </div>
 
-                  {/* Group: Engine Specs */}
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-slate-800/80 pb-1.5">エンジン詳細</h4>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">排気量数値(cc) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="689"
-                          value={displacement}
-                          onChange={(e) => setDisplacement(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">エンジンタイプ <span className="text-pink-500">*</span></label>
-                        <select
-                          value={engineType}
-                          onChange={(e) => setEngineType(e.target.value)}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white"
-                        >
-                          <option value="4st">4ストローク (4st)</option>
-                          <option value="2st">2ストローク (2st)</option>
-                          <option value="EV">電気モーター (EV)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">気筒数 <span className="text-pink-500">*</span></label>
-                        <select
-                          value={cylinders}
-                          onChange={(e) => setCylinders(e.target.value)}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white"
-                        >
-                          <option value="単">単気筒 (1)</option>
-                          <option value="2">2気筒 (2)</option>
-                          <option value="3">3気筒 (3)</option>
-                          <option value="4">4気筒 (4)</option>
-                        </select>
-                      </div>
+                  {/* Tuning Section: Performance */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                      <Zap className="w-3 h-3 text-pink-500" />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Performance Matrix</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">変速機 (MT/AT) <span className="text-pink-500">*</span></label>
-                        <select
-                          value={transmission}
-                          onChange={(e) => setTransmission(e.target.value as any)}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white"
-                        >
-                          <option value="MT">マニュアル (MT)</option>
-                          <option value="AT">オートマチック (AT)</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">最高出力 (馬力 PS) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="73"
-                          value={horsepower}
-                          onChange={(e) => setHorsepower(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
+                    <div className="grid grid-cols-2 gap-4">
+                       {[
+                         { label: "Power (PS)", value: horsepower, set: setHorsepower, max: 250 },
+                         { label: "Efficiency (km/L)", value: fuelEfficiency, set: setFuelEfficiency, max: 100 },
+                         { label: "Weight (kg)", value: weight, set: setWeight, max: 400 },
+                         { label: "Displacement (cc)", value: displacement, set: setDisplacement, max: 2000 }
+                       ].map(spec => (
+                         <div key={spec.label} className="space-y-2 bg-slate-900/60 p-4 rounded-2xl border border-white/5">
+                           <div className="flex justify-between items-baseline">
+                             <label className="text-[8px] font-black text-slate-500 uppercase">{spec.label}</label>
+                             <span className="text-xs font-black text-cyan-400 italic">{spec.value || "---"}</span>
+                           </div>
+                           <input type="number" required value={spec.value} onChange={(e) => spec.set(e.target.value ? Number(e.target.value) : "")} className="w-full h-8 bg-slate-950 rounded-lg px-3 text-[10px] font-black border border-white/5 focus:border-cyan-500/30 outline-none" />
+                           <div className="h-1 w-full bg-slate-950 rounded-full overflow-hidden">
+                             <motion.div animate={{ width: `${Math.min((Number(spec.value) / spec.max) * 100, 100)}%` }} className="h-full bg-cyan-500/40" />
+                           </div>
+                         </div>
+                       ))}
                     </div>
                   </div>
 
-                  {/* Group: Body Dimensions */}
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-slate-800/80 pb-1.5">車体サイズ・燃費・価格</h4>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">車両重量 (kg) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="188"
-                          value={weight}
-                          onChange={(e) => setWeight(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">燃費 (km/l) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="28"
-                          value={fuelEfficiency}
-                          onChange={(e) => setFuelEfficiency(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">シート高 (mm) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="835"
-                          value={seatHeight}
-                          onChange={(e) => setSeatHeight(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-2 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
+                  {/* Visual Protocol Selection */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                      <Warehouse className="w-3 h-3 text-cyan-500" />
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Visual Profile protocol</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">全長 (mm) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="2070"
-                          value={totalLength}
-                          onChange={(e) => setTotalLength(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-400 block mb-1">税込価格 (万円) <span className="text-pink-500">*</span></label>
-                        <input
-                          type="number"
-                          required
-                          placeholder="105"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : "")}
-                          className="w-full h-10 px-3 rounded-lg bg-slate-950 border border-slate-800 focus:outline-none focus:border-cyan-500 text-white font-mono"
-                        />
-                      </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["scooter", "supersport", "american"] as const).map(style => (
+                        <button key={style} type="button" onClick={() => setBikeStyle(style)} className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${bikeStyle === style ? 'bg-cyan-600/10 border-cyan-400 shadow-lg shadow-cyan-900/20' : 'bg-slate-950 border-white/5 text-slate-600'}`}>
+                          <img src={`/pictogram_${style}.png`} className="w-10 h-10 grayscale brightness-75 mix-blend-screen" />
+                          <span className="text-[8px] font-black uppercase tracking-tighter">{style}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Group: Style / Pictogram Selection */}
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest border-b border-slate-800/80 pb-1.5">バイクデザイン（写真がない場合のピクトグラム）</h4>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 block mb-2">バイクのスタイル・形状を選択してください</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(["scooter", "supersport", "american"] as const).map((style) => (
-                          <button
-                            key={style}
-                            type="button"
-                            onClick={() => setBikeStyle(style)}
-                            className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${
-                              bikeStyle === style
-                                ? "bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.15)]"
-                                : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700"
-                            }`}
-                          >
-                            <img
-                              src={`/pictogram_${style}.png`}
-                              alt={style}
-                              className="w-10 h-10 object-contain image-render-pixel"
-                              style={{ imageRendering: "pixelated" }}
-                            />
-                            <span className="text-[9px] font-bold uppercase tracking-wider">
-                              {style === "scooter" ? "スクーター" : style === "supersport" ? "スポーツ" : "アメリカン"}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
 
-                {/* Form Footer */}
-                <div className="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-between gap-4">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setMode("menu");
-                      setErrorMsg("");
-                    }}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    戻る
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-pink-600 hover:bg-pink-500 text-white font-bold px-6 shadow-md shadow-pink-500/10 flex items-center gap-1.5"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        登録中...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4" />
-                        このスペックで愛車登録
-                      </>
-                    )}
-                  </Button>
+                <div className="p-6 bg-slate-950 border-t border-white/5 flex gap-4">
+                  <GameButton type="submit" disabled={isSubmitting} className="flex-1 py-4 text-xs">
+                    {isSubmitting ? "TRANSMITTING..." : "COMMIT CALIBRATION"}
+                  </GameButton>
                 </div>
               </form>
             </motion.div>
@@ -573,11 +230,7 @@ export default function SetupGarage() {
         </AnimatePresence>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .image-render-pixel { image-rendering: pixelated; }
-      `}} />
+      <style dangerouslySetInnerHTML={{ __html: `.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .animate-spin-slow { animation: spin-slow 8s linear infinite; }` }} />
     </div>
   );
 }
