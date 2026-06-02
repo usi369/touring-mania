@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from "@/lib/utils";
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -27,15 +28,15 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
   }, [message, onClose]);
 
   const bgColor = {
-    success: 'bg-green-900/40 border-green-500/40 backdrop-blur-md',
-    error: 'bg-red-900/40 border-red-500/40 backdrop-blur-md',
-    info: 'bg-slate-900/60 border-slate-700/60 backdrop-blur-md',
+    success: 'bg-green-900/40 border-green-500/40',
+    error: 'bg-red-900/40 border-red-500/40',
+    info: 'bg-slate-900/60 border-slate-700/60',
   }[message.type];
 
   const textColor = {
     success: 'text-green-400',
     error: 'text-red-400',
-    info: 'text-blue-400',
+    info: 'text-cyan-400',
   }[message.type];
 
   const Icon = {
@@ -46,26 +47,32 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 50, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -40, transition: { duration: 0.8, ease: "easeInOut" } }}
+      exit={{ opacity: 0, scale: 1.1, transition: { duration: 0.3 } }}
       layout
-      className={`${bgColor} border rounded-xl p-4 flex gap-3 items-start pointer-events-auto shadow-[0_4px_20px_rgba(0,0,0,0.4)] border-white/10`}
+      className={cn(
+        "relative p-4 rounded-2xl border-2 flex gap-4 items-center pointer-events-auto backdrop-blur-xl shadow-2xl",
+        bgColor,
+        "border-white/10"
+      )}
     >
-      <Icon className={`${textColor} flex-shrink-0 w-5 h-5 mt-0.5`} />
+      <div className={cn("p-2 rounded-lg bg-slate-950/50 border border-white/5", textColor)}>
+        <Icon className="w-4 h-4" />
+      </div>
+      
       <div className="flex-1 min-w-0">
-        <p className={`${textColor} font-bold text-sm sm:text-base tracking-tight`}>{message.title}</p>
+        <p className={cn("font-black text-[10px] uppercase tracking-widest italic leading-none", textColor)}>{message.title}</p>
         {message.message && (
-          <p className="text-slate-300 text-xs sm:text-sm mt-1 leading-relaxed">{message.message}</p>
+          <p className="text-slate-400 text-[9px] font-bold mt-1 leading-tight uppercase line-clamp-1">{message.message}</p>
         )}
       </div>
+
       <button
         onClick={() => onClose(message.id)}
-        className="flex-shrink-0 text-slate-500 hover:text-white transition-colors p-1"
+        className="shrink-0 p-1 text-slate-600 hover:text-white transition-colors"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-4 h-4">
-          <path d="M18 6L6 18M6 6l12 12" />
-        </svg>
+        <X className="w-3 h-3" />
       </button>
     </motion.div>
   );
@@ -112,8 +119,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
+      {/* Toast Container - Centered within the Stage via absolute positioning */}
       <div 
-        className="fixed bottom-6 right-6 z-[1000] w-full max-w-[320px] sm:max-w-sm flex flex-col gap-3 pointer-events-none"
+        className="absolute bottom-24 left-6 right-6 z-[1000] flex flex-col gap-3 pointer-events-none"
       >
         <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
