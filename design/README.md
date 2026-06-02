@@ -10,3 +10,10 @@
 ## 現在のドキュメント
 - [画面構成・要素ドキュメント](pages_structure.md)
 - [スタイル・デザインガイド](style_guide.md)
+- [ゲームUIデザイン知見・ノウハウ集](KNOWLEDGE.md)
+- [今後の作業の方向性](WORK_DIRECTION.md)
+
+## 出版プロジェクト (Publication)
+技術書執筆に関するドキュメントは `../publication/` フォルダにあります。
+- [書籍目次案](../publication/table_of_contents.md)
+- [第1章 サンプル原稿](../publication/sample_chapter_01.md)
