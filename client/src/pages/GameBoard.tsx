@@ -648,7 +648,7 @@ export default function GameBoard() {
                     isYourTurn={gameState.game.currentTurn === 1 && gamePhase === 'playing'}
                     fieldCards={gameState.fieldCards || []}
                     isDeckEmpty={((gameState.deckCounts?.large || 0) + (gameState.deckCounts?.medium || 0) + (gameState.deckCounts?.small || 0)) === 0}
-                    onCardPlay={async (ids, bind) => {
+                    onCardPlay={async (ids: number[], bind?: any) => {
                       const playedBikes = ids.map((id: number) => playerHand?.find((b: any) => b.id === id) || gameState.bikes?.find((b: any) => b.id === id)).filter(Boolean);
                       const bikeNames = playedBikes.map((b: any) => b.name).join(", ");
                       const res = await playCardMutation.mutateAsync({ gameId: gameId!, playerId: 1, bikeIds: ids, bindDeclare: bind });

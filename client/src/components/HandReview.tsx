@@ -7,7 +7,7 @@ import GameButton from "./ui/GameButton";
 interface HandReviewProps {
   hand: any[];
   playerNumber: number;
-  onComplete: () => void;
+  onConfirm: () => void;
 }
 
 const SPEC_ITEMS = [
@@ -21,7 +21,7 @@ const SPEC_ITEMS = [
  * HandReview - Tactical Briefing Screen.
  * Logical design: Strategic Stillness. Calm before the storm.
  */
-export default function HandReview({ hand, onComplete }: HandReviewProps) {
+export default function HandReview({ hand, onConfirm }: HandReviewProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isConfirming, setIsConfirming] = useState(false);
   const selectedBike = hand[selectedIdx];
@@ -29,7 +29,7 @@ export default function HandReview({ hand, onComplete }: HandReviewProps) {
   const handleConfirm = () => {
     if (isConfirming) return;
     setIsConfirming(true);
-    onComplete();
+    onConfirm();
   };
 
   return (

@@ -5,7 +5,37 @@ import GameButton from "./ui/GameButton";
 import BikeCard from "./BikeCard";
 import { X, Info, ChevronRight, ChevronLeft } from "lucide-react";
 
-// ... (SpecType interfaces and labels same as before)
+interface CardPlayPhaseProps {
+  currentPlayer: number;
+  currentPlayerName: string;
+  playerHand: any[];
+  declaredSpec: string;
+  declaredDirection: string;
+  currentBind?: string;
+  bindValue?: string;
+  isYourTurn: boolean;
+  fieldCards?: any[];
+  isDeckEmpty?: boolean;
+  onCardPlay: (bikeIds: number[], bindDeclare?: any) => Promise<void>;
+  onPass: () => Promise<void>;
+  onDraw: () => Promise<void>;
+  onLog?: (message: string, type: 'info' | 'success' | 'error' | 'warning') => void;
+  isLoading?: boolean;
+}
+
+const specLabels: Record<string, string> = {
+  horsepower: "馬力",
+  fuelEfficiency: "燃費",
+  seatHeight: "シート高",
+  totalLength: "全長",
+  weight: "重量",
+  price: "価格",
+  year: "発売年",
+  cylinders: "気筒数",
+  transmission: "変速機",
+};
+
+const getSpecLabel = (spec: string) => specLabels[spec] || spec;
 
 export default function CardPlayPhase({
   currentPlayer,
@@ -31,7 +61,12 @@ export default function CardPlayPhase({
   const [selectedBindValue, setSelectedBindValue] = useState<string | null>(null);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // ... (useEffect for reset same as before)
+  // 自分のターンが開始または終了した際にカードを引いたフラグをリセット
+  useEffect(() => {
+    if (!isYourTurn) {
+      setHasDrawn(false);
+    }
+  }, [isYourTurn]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -53,7 +88,54 @@ export default function CardPlayPhase({
     }
   };
 
-  // ... (validateSelection logic same as before)
+  const validateSelection = (): { valid: boolean; reason?: string } => {
+    if (selectedCards.length === 0) return { valid: false };
+    
+    const firstBike = playerHand.find(b => b.id === selectedCards[0]);
+    if (!firstBike) return { valid: false };
+    
+    const targetValue = firstBike[declaredSpec];
+
+    // 複数枚選択の場合、すべて同じスペック値かチェック
+    if (selectedCards.length > 1) {
+      for (let i = 1; i < selectedCards.length; i++) {
+        const bike = playerHand.find(b => b.id === selectedCards[i]);
+        if (bike && bike[declaredSpec] !== targetValue) {
+          return { valid: false, reason: "複数枚出す場合は、スペック数値が同じカードを選んでください" };
+        }
+      }
+    }
+
+    // 場にカードがある場合、以上・以下のチェック
+    const activeFieldCards = fieldCards.filter((fc: any) => fc.playerId >= 0);
+    
+    if (activeFieldCards.length > 0) {
+      const lastPlayedRecord = activeFieldCards[0];
+      const lastBike = lastPlayedRecord.bikes?.[lastPlayedRecord.bikes.length - 1];
+      if (lastBike) {
+        const previousValue = lastBike[declaredSpec];
+        if (declaredDirection === 'up' && targetValue < previousValue) {
+          return { valid: false, reason: "場に出ているカード以上の数値を持つカードを出してください" };
+        } else if (declaredDirection === 'down' && targetValue > previousValue) {
+          return { valid: false, reason: "場に出ているカード以下の数値を持つカードを出してください" };
+        }
+      }
+    }
+
+    // 縛り（bind）のチェック
+    if (currentBind && bindValue) {
+      let matchesBind = false;
+      if (currentBind === 'maker') matchesBind = firstBike.maker === bindValue;
+      else if (currentBind === 'cylinders') matchesBind = String(firstBike.cylinders) === bindValue;
+      else if (currentBind === 'transmission') matchesBind = firstBike.transmission === bindValue;
+      
+      if (!matchesBind) {
+        return { valid: false, reason: `縛り（${currentBind}: ${bindValue}）を満たすカードを出してください` };
+      }
+    }
+
+    return { valid: true };
+  };
 
   const handlePlayCard = async () => {
     if (selectedCards.length === 0) return;
@@ -80,7 +162,45 @@ export default function CardPlayPhase({
     }
   };
 
-  // ... (getAvailableBindTypes same as before)
+  const handleConfirmBind = () => {
+    if (selectedBindType && selectedBindValue) {
+      handlePlayCard();
+    }
+  };
+
+  const getAvailableBindTypes = (): { type: string; label: string; value: string; available: boolean }[] => {
+    if (selectedCards.length === 0) return [];
+
+    const firstSelectedBike = playerHand.find(b => b.id === selectedCards[0]);
+    if (!firstSelectedBike) return [];
+
+    const activeFieldCards = fieldCards.filter((fc: any) => fc.playerId >= 0);
+    const latestRecord = activeFieldCards.length > 0 ? activeFieldCards[0] : null;
+    const latestBike = latestRecord?.bikes?.[latestRecord.bikes.length - 1];
+
+    if (!latestBike) return [];
+
+    return [
+      {
+        type: 'maker',
+        label: 'メーカー',
+        value: firstSelectedBike.maker,
+        available: firstSelectedBike.maker === latestBike.maker,
+      },
+      {
+        type: 'cylinders',
+        label: '気筒数',
+        value: String(firstSelectedBike.cylinders),
+        available: firstSelectedBike.cylinders === latestBike.cylinders,
+      },
+      {
+        type: 'transmission',
+        label: 'AT/MT',
+        value: firstSelectedBike.transmission,
+        available: firstSelectedBike.transmission === latestBike.transmission,
+      },
+    ];
+  };
 
   const availableBindTypes = getAvailableBindTypes();
   const hasAnyAvailableBind = availableBindTypes.some(bt => bt.available);

@@ -33,7 +33,7 @@ export default function GameResultScreen({
     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl overflow-hidden font-sans">
       
       {/* 1. Victory / Defeat Atmosphere */}
-      <AnimatePresence grow>
+      <AnimatePresence>
         {isYouWinner ? (
           <motion.div
             initial={{ opacity: 0 }}

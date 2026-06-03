@@ -2,7 +2,8 @@ import * as React from "react";
 import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface GameButtonProps extends HTMLMotionProps<"button"> {
+interface GameButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
+  children?: React.ReactNode;
   variant?: "primary" | "secondary" | "danger" | "ghost";
   glow?: boolean;
 }
