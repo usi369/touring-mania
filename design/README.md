@@ -7,6 +7,9 @@
 - `assets/`: 検討用の画像やアイコン案など
 - `prototypes/`: 遷移図やワイヤーフレームなど
 
+## Penpot 連携
+- [Penpot ↔ コード連携セットアップ](PENPOT.md) — Cursor MCP 経由でデザインと実装を双方向同期
+
 ## 現在のドキュメント
 - [画面構成・要素ドキュメント](pages_structure.md)
 - [スタイル・デザインガイド](style_guide.md)

@@ -14,7 +14,7 @@ export default function GameLayout({
   bgClass = "bg-slate-950" 
 }: GameLayoutProps) {
   return (
-    <div className={`fixed inset-0 w-full h-full overflow-hidden flex items-center justify-center ${bgClass} select-none`}>
+    <div className={`fixed inset-0 w-full h-[100dvh] overflow-hidden flex items-center justify-center ${bgClass} select-none`}>
       {/* --- Global Juice Layer (Background) --- */}
       <div className="absolute inset-0 z-0">
         {/* Dynamic Background Orbs */}
@@ -30,10 +30,10 @@ export default function GameLayout({
 
       {/* --- Main Game Stage --- */}
       <div 
-        className="relative w-full h-full max-w-[100vh] max-h-[100vw] aspect-[9/16] bg-slate-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col z-10 border-x border-white/5"
+        className="relative w-full h-full max-h-[100dvh] aspect-[9/16] bg-slate-900 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col z-10 border-x border-white/5"
         style={{
-          maxWidth: 'calc(100vh * (9 / 16))',
-          maxHeight: '100vh',
+          maxWidth: 'calc(100dvh * (9 / 16))',
+          maxHeight: '100dvh',
         }}
       >
         {children}

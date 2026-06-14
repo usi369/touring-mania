@@ -15,7 +15,8 @@
     "test": "vitest run",
     "db:push": "npx wrangler d1 migrations apply touring-mania-db --local",
     "db:sync-bikes": "node scripts/sync-bikes-from-production.mjs",
-    "db:sync-bikes:check": "node scripts/sync-bikes-from-production.mjs --dry-run"
+    "db:sync-bikes:check": "node scripts/sync-bikes-from-production.mjs --dry-run",
+    "dev:penpot-mcp": "npx -y @penpot/mcp@stable"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
